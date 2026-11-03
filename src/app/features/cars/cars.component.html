@@ -1,0 +1,60 @@
+<div class="mb-8">
+  <p class="heat-subtitle">Garage</p>
+  <h1 class="heat-title">Cars</h1>
+</div>
+
+@if (error()) {
+  <div class="mb-4 rounded-sm border border-heat-red/40 bg-heat-red/10 px-4 py-3">{{ error() }}</div>
+}
+
+<div class="grid gap-6 lg:grid-cols-5">
+  <section class="heat-panel p-5 lg:col-span-3">
+    @if (loading()) {
+      <p class="text-heat-chrome">Loading…</p>
+    } @else {
+      <div class="space-y-3">
+        @for (car of cars(); track car.id) {
+          <div class="flex items-center justify-between gap-3 border-b border-white/5 pb-3">
+            <div class="flex items-center gap-3">
+              <span class="h-4 w-4 rounded-full" [style.backgroundColor]="car.colorHex"></span>
+              <div>
+                <p class="font-display text-xl tracking-wider">{{ car.name }}</p>
+                <p class="font-mono text-xs text-heat-chrome">{{ car.colorHex }}</p>
+              </div>
+            </div>
+            @if (session.isHost()) {
+              <div class="flex gap-2">
+                <button type="button" class="heat-btn-ghost text-sm" (click)="startEdit(car)">Edit</button>
+                <button type="button" class="heat-btn-ghost text-sm text-heat-red" (click)="remove(car)">Delete</button>
+              </div>
+            }
+          </div>
+        } @empty {
+          <p class="text-heat-chrome">No cars registered.</p>
+        }
+      </div>
+    }
+  </section>
+
+  @if (session.isHost()) {
+    <section class="heat-panel p-5 lg:col-span-2">
+      <h2 class="mb-4 font-display text-2xl tracking-wider">
+        {{ editingId ? 'Edit Car' : 'Add Car' }}
+      </h2>
+      <form class="space-y-4" (ngSubmit)="save()">
+        <div>
+          <label class="heat-label" for="carName">Name</label>
+          <input id="carName" class="heat-input" name="name" [(ngModel)]="name" />
+        </div>
+        <div>
+          <label class="heat-label" for="carColor">Color</label>
+          <input id="carColor" class="heat-input h-11" type="color" name="colorHex" [(ngModel)]="colorHex" />
+        </div>
+        <div class="flex gap-2">
+          <button type="submit" class="heat-btn-primary">Save</button>
+          <button type="button" class="heat-btn-secondary" (click)="startCreate()">Clear</button>
+        </div>
+      </form>
+    </section>
+  }
+</div>

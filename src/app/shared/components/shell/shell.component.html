@@ -1,0 +1,75 @@
+<div class="min-h-screen bg-heat-asphalt bg-speed-lines">
+  <header class="border-b border-heat-yellow/20 bg-heat-carbon/95 backdrop-blur">
+    <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
+      <a routerLink="/dashboard" class="group flex items-center gap-3">
+        <span
+          class="flex h-10 w-10 items-center justify-center rounded-sm bg-heat-red font-display text-2xl text-white shadow-[0_0_20px_rgba(225,34,28,0.45)]"
+        >
+          H
+        </span>
+        <div>
+          <p class="font-display text-2xl leading-none tracking-[0.18em] text-heat-cream">
+            Heat
+          </p>
+          <p class="text-[11px] uppercase tracking-[0.28em] text-heat-yellow">
+            Championship Companion
+          </p>
+        </div>
+      </a>
+
+      <nav class="hidden items-center gap-1 md:flex">
+        @for (link of visibleLinks(); track link.path) {
+          <a
+            [routerLink]="link.path"
+            routerLinkActive="bg-heat-yellow/15 text-heat-yellow"
+            class="rounded-sm px-3 py-2 text-sm uppercase tracking-[0.16em] text-heat-chrome transition hover:text-heat-cream"
+          >
+            {{ link.label }}
+          </a>
+        }
+      </nav>
+
+      <div class="flex items-center gap-3">
+        <div class="hidden text-right sm:block">
+          <p class="font-mono text-xs uppercase tracking-widest text-heat-yellow">
+            {{ session.role() }}
+          </p>
+          <p class="text-sm text-heat-cream">{{ session.username() }}</p>
+        </div>
+        <button type="button" class="heat-btn-ghost text-sm" (click)="disconnect()">
+          Disconnect
+        </button>
+        <button
+          type="button"
+          class="heat-btn-secondary px-3 py-1 md:hidden"
+          (click)="menuOpen = !menuOpen"
+          [attr.aria-expanded]="menuOpen"
+        >
+          Menu
+        </button>
+      </div>
+    </div>
+
+    <div
+      class="border-t border-heat-yellow/10 px-4 py-2 md:hidden"
+      [ngClass]="{ hidden: !menuOpen }"
+    >
+      <div class="flex flex-col gap-1">
+        @for (link of visibleLinks(); track link.path) {
+          <a
+            [routerLink]="link.path"
+            routerLinkActive="text-heat-yellow"
+            class="rounded-sm px-2 py-2 uppercase tracking-[0.16em] text-heat-chrome"
+            (click)="menuOpen = false"
+          >
+            {{ link.label }}
+          </a>
+        }
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-6xl px-4 py-8">
+    <router-outlet />
+  </main>
+</div>

@@ -1,0 +1,113 @@
+<div class="mb-8 flex flex-wrap items-end justify-between gap-4">
+  <div>
+    <p class="heat-subtitle">Telemetry Deck</p>
+    <h1 class="heat-title">Dashboard</h1>
+  </div>
+  @if (session.isHost()) {
+    <a routerLink="/log-race" class="heat-btn-primary">Log Race</a>
+  }
+</div>
+
+@if (error()) {
+  <div class="mb-6 rounded-sm border border-heat-red/40 bg-heat-red/10 px-4 py-3" role="alert">
+    {{ error() }}
+  </div>
+}
+
+@if (loading()) {
+  <p class="font-mono uppercase tracking-widest text-heat-chrome">Loading telemetry…</p>
+} @else {
+  <div class="grid gap-6 lg:grid-cols-5">
+    <section class="heat-panel p-5 lg:col-span-3">
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 class="font-display text-2xl tracking-[0.14em] text-heat-cream">
+          Championship Standings
+        </h2>
+        <select
+          class="heat-input max-w-xs"
+          [value]="selectedChampionshipId() ?? ''"
+          (change)="onChampionshipChange($any($event.target).value)"
+        >
+          <option value="">No championship</option>
+          @for (c of championships(); track c.id) {
+            <option [value]="c.id">{{ c.name }} · {{ c.season }}</option>
+          }
+        </select>
+      </div>
+
+      @if (!standings().length) {
+        <p class="text-heat-chrome">No race results for this championship yet.</p>
+      } @else {
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[420px] text-left text-sm">
+            <thead class="border-b border-heat-yellow/20 text-xs uppercase tracking-[0.16em] text-heat-yellow">
+              <tr>
+                <th class="py-2 pr-2">Pos</th>
+                <th class="py-2 pr-2">Driver</th>
+                <th class="py-2 pr-2">Pts</th>
+                <th class="py-2 pr-2">Wins</th>
+                <th class="py-2">Podiums</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of standings(); track row.driverId; let i = $index) {
+                <tr class="border-b border-white/5">
+                  <td class="py-2 pr-2 font-mono text-heat-yellow">{{ i + 1 }}</td>
+                  <td class="py-2 pr-2">
+                    <span class="font-mono text-heat-chrome">#{{ row.number | number: '2.0-0' }}</span>
+                    {{ row.driverName }}
+                    <span class="ml-1 text-xs text-heat-chrome">({{ row.abbreviation }})</span>
+                  </td>
+                  <td class="py-2 pr-2 font-mono">{{ row.points }}</td>
+                  <td class="py-2 pr-2 font-mono">{{ row.wins }}</td>
+                  <td class="py-2 font-mono">{{ row.podiums }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+
+    <section class="heat-panel p-5 lg:col-span-2">
+      <h2 class="mb-4 font-display text-2xl tracking-[0.14em]">Driver Form</h2>
+      <div class="space-y-3">
+        @for (d of driverStats(); track d.driverId) {
+          <div class="flex items-center justify-between gap-3 border-b border-white/5 pb-2">
+            <div>
+              <p class="text-heat-cream">{{ d.driverName }}</p>
+              <p class="font-mono text-xs text-heat-chrome">
+                {{ d.races }} races · avg {{ d.avgFinish === null ? '—' : (d.avgFinish | number: '1.1-1') }}
+              </p>
+            </div>
+            <p class="font-mono text-heat-yellow">{{ d.wins }}W</p>
+          </div>
+        } @empty {
+          <p class="text-heat-chrome">No driver stats yet.</p>
+        }
+      </div>
+    </section>
+
+    <section class="heat-panel p-5 lg:col-span-5">
+      <h2 class="mb-4 font-display text-2xl tracking-[0.14em]">Car Performance</h2>
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        @for (car of carStats(); track car.carId) {
+          <div class="rounded-sm border border-white/10 bg-heat-steel/60 p-3">
+            <div class="mb-2 flex items-center gap-2">
+              <span
+                class="h-3 w-3 rounded-full"
+                [style.backgroundColor]="car.colorHex"
+              ></span>
+              <p class="font-display text-xl tracking-wider">{{ car.carName }}</p>
+            </div>
+            <p class="font-mono text-xs uppercase tracking-widest text-heat-chrome">
+              {{ car.races }} races · {{ car.wins }} wins · {{ car.podiums }} podiums
+            </p>
+          </div>
+        } @empty {
+          <p class="text-heat-chrome">No car telemetry yet.</p>
+        }
+      </div>
+    </section>
+  </div>
+}

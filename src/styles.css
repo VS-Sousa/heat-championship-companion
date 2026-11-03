@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --heat-asphalt: #0b0e14;
+  --heat-red: #e1221c;
+  --heat-yellow: #f5c518;
+  --heat-cream: #f7f1e3;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--heat-asphalt);
+  color: var(--heat-cream);
+  font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  letter-spacing: 0.02em;
+}
+
+@layer components {
+  .heat-panel {
+    @apply rounded-sm border border-heat-yellow/30 bg-heat-carbon/90 shadow-dash;
+  }
+
+  .heat-input {
+    @apply w-full rounded-sm border border-heat-chrome/30 bg-heat-steel px-3 py-2 text-heat-cream outline-none transition focus:border-heat-yellow focus:ring-1 focus:ring-heat-yellow/40;
+  }
+
+  .heat-label {
+    @apply mb-1 block text-xs uppercase tracking-[0.18em] text-heat-chrome;
+  }
+
+  .heat-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-sm px-4 py-2 font-display text-lg uppercase tracking-widest transition disabled:cursor-not-allowed disabled:opacity-40;
+  }
+
+  .heat-btn-primary {
+    @apply heat-btn bg-heat-red text-white hover:bg-heat-red-hot;
+  }
+
+  .heat-btn-secondary {
+    @apply heat-btn border border-heat-yellow/50 bg-transparent text-heat-yellow hover:bg-heat-yellow/10;
+  }
+
+  .heat-btn-ghost {
+    @apply heat-btn text-heat-chrome hover:text-heat-cream;
+  }
+
+  .heat-title {
+    @apply font-display text-4xl uppercase tracking-[0.12em] text-heat-cream sm:text-5xl;
+  }
+
+  .heat-subtitle {
+    @apply font-body text-lg uppercase tracking-[0.2em] text-heat-yellow;
+  }
+}

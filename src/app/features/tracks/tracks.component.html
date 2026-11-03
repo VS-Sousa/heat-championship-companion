@@ -1,0 +1,57 @@
+<div class="mb-8">
+  <p class="heat-subtitle">Circuits</p>
+  <h1 class="heat-title">Tracks</h1>
+</div>
+
+@if (error()) {
+  <div class="mb-4 rounded-sm border border-heat-red/40 bg-heat-red/10 px-4 py-3">{{ error() }}</div>
+}
+
+<div class="grid gap-6 lg:grid-cols-5">
+  <section class="heat-panel p-5 lg:col-span-3">
+    @if (loading()) {
+      <p class="text-heat-chrome">Loading…</p>
+    } @else {
+      <div class="space-y-3">
+        @for (track of tracks(); track track.id) {
+          <div class="flex items-center justify-between gap-3 border-b border-white/5 pb-3">
+            <div>
+              <p class="font-display text-xl tracking-wider">{{ track.name }}</p>
+              <p class="text-xs uppercase tracking-[0.16em] text-heat-chrome">{{ track.country }}</p>
+            </div>
+            @if (session.isHost()) {
+              <div class="flex gap-2">
+                <button type="button" class="heat-btn-ghost text-sm" (click)="startEdit(track)">Edit</button>
+                <button type="button" class="heat-btn-ghost text-sm text-heat-red" (click)="remove(track)">Delete</button>
+              </div>
+            }
+          </div>
+        } @empty {
+          <p class="text-heat-chrome">No tracks registered.</p>
+        }
+      </div>
+    }
+  </section>
+
+  @if (session.isHost()) {
+    <section class="heat-panel p-5 lg:col-span-2">
+      <h2 class="mb-4 font-display text-2xl tracking-wider">
+        {{ editingId ? 'Edit Track' : 'Add Track' }}
+      </h2>
+      <form class="space-y-4" (ngSubmit)="save()">
+        <div>
+          <label class="heat-label" for="trackName">Name</label>
+          <input id="trackName" class="heat-input" name="name" [(ngModel)]="name" />
+        </div>
+        <div>
+          <label class="heat-label" for="country">Country</label>
+          <input id="country" class="heat-input" name="country" [(ngModel)]="country" />
+        </div>
+        <div class="flex gap-2">
+          <button type="submit" class="heat-btn-primary">Save</button>
+          <button type="button" class="heat-btn-secondary" (click)="startCreate()">Clear</button>
+        </div>
+      </form>
+    </section>
+  }
+</div>

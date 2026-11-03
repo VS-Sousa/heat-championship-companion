@@ -1,0 +1,117 @@
+<div class="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
+  <div class="pointer-events-none absolute inset-0 bg-checkered opacity-[0.07]"></div>
+  <div
+    class="pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-heat-red/20 blur-3xl"
+  ></div>
+  <div
+    class="pointer-events-none absolute -right-16 bottom-0 h-80 w-80 rounded-full bg-heat-yellow/10 blur-3xl"
+  ></div>
+
+  <section class="heat-panel relative z-10 w-full max-w-xl p-6 sm:p-8">
+    <p class="heat-subtitle mb-2">Bring Your Own Supabase</p>
+    <h1 class="heat-title mb-2">Heat</h1>
+    <p class="mb-8 max-w-md text-heat-chrome">
+      Connect to your league database to track championships, races, drivers and
+      car telemetry.
+    </p>
+
+    <div class="mb-6 grid grid-cols-2 gap-2">
+      <button
+        type="button"
+        class="rounded-sm border px-3 py-2 uppercase tracking-[0.16em] transition"
+        [ngClass]="
+          mode === 'guest'
+            ? 'border-heat-yellow bg-heat-yellow/15 text-heat-yellow'
+            : 'border-white/20 text-heat-chrome'
+        "
+        (click)="mode = 'guest'"
+      >
+        Guest
+      </button>
+      <button
+        type="button"
+        class="rounded-sm border px-3 py-2 uppercase tracking-[0.16em] transition"
+        [ngClass]="
+          mode === 'host'
+            ? 'border-heat-yellow bg-heat-yellow/15 text-heat-yellow'
+            : 'border-white/20 text-heat-chrome'
+        "
+        (click)="mode = 'host'"
+      >
+        Host / Admin
+      </button>
+    </div>
+
+    <form class="space-y-4" (ngSubmit)="submit()">
+      <div>
+        <label class="heat-label" for="url">Supabase URL</label>
+        <input
+          id="url"
+          class="heat-input font-mono text-sm"
+          name="url"
+          [(ngModel)]="url"
+          placeholder="https://xxxx.supabase.co"
+          autocomplete="off"
+        />
+      </div>
+
+      <div>
+        <label class="heat-label" for="anonKey">Anon Key</label>
+        <input
+          id="anonKey"
+          class="heat-input font-mono text-sm"
+          name="anonKey"
+          [(ngModel)]="anonKey"
+          placeholder="eyJhbGciOi..."
+          autocomplete="off"
+        />
+      </div>
+
+      @if (mode === 'host') {
+        <div>
+          <label class="heat-label" for="email">Email</label>
+          <input
+            id="email"
+            class="heat-input"
+            name="email"
+            type="email"
+            [(ngModel)]="email"
+            autocomplete="username"
+          />
+        </div>
+        <div>
+          <label class="heat-label" for="password">Password</label>
+          <input
+            id="password"
+            class="heat-input"
+            name="password"
+            type="password"
+            [(ngModel)]="password"
+            autocomplete="current-password"
+          />
+        </div>
+      }
+
+      @if (error()) {
+        <div
+          class="rounded-sm border border-heat-red/50 bg-heat-red/10 px-3 py-2 text-sm text-heat-cream"
+          role="alert"
+        >
+          {{ error() }}
+        </div>
+      }
+
+      <button
+        type="submit"
+        class="heat-btn-primary w-full"
+        [disabled]="loading()"
+      >
+        {{ loading() ? 'Connecting…' : mode === 'guest' ? 'Enter as Guest' : 'Sign In' }}
+      </button>
+    </form>
+
+    <p class="mt-6 text-xs uppercase tracking-[0.18em] text-heat-chrome/70">
+      Session expires automatically after 24 hours
+    </p>
+  </section>
+</div>
