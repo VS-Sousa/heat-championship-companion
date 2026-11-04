@@ -1,15 +1,28 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { Car, Driver } from '../../core/models/domain.models';
 import { CarsService } from '../../core/services/cars.service';
 import { DriversService } from '../../core/services/drivers.service';
 import { SessionService } from '../../core/services/session.service';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { formatDriverName } from '../../core/utils/driver-display';
+import {
+  DriverKindFilter,
+  DriverKindFilterComponent,
+} from '../../shared/components/driver-kind-filter/driver-kind-filter.component';
 
 @Component({
   selector: 'app-drivers',
   standalone: true,
-  imports: [FormsModule, DecimalPipe],
+  imports: [
+    FormsModule,
+    DecimalPipe,
+    TranslatePipe,
+    RouterLink,
+    DriverKindFilterComponent,
+  ],
   templateUrl: './drivers.component.html',
   styleUrl: './drivers.component.css',
 })
@@ -22,13 +35,26 @@ export class DriversComponent implements OnInit {
   readonly cars = signal<Car[]>([]);
   readonly error = signal<string | null>(null);
   readonly loading = signal(true);
+  readonly listFilter = signal<DriverKindFilter>('human');
+
+  readonly filteredDrivers = computed(() => {
+    const filter = this.listFilter();
+    const all = this.drivers();
+    if (filter === 'human') return all.filter((d) => !d.isLegend);
+    if (filter === 'legend') return all.filter((d) => d.isLegend);
+    return all;
+  });
 
   editingId: string | null = null;
   name = '';
+  nickname = '';
   abbreviation = '';
   number = 1;
   isLegend = false;
   fixedCarId = '';
+  favoriteCarId = '';
+
+  readonly formatDriverName = formatDriverName;
 
   async ngOnInit(): Promise<void> {
     await this.reload();
@@ -58,22 +84,31 @@ export class DriversComponent implements OnInit {
     return this.cars().find((c) => c.id === id)?.name ?? 'Missing car';
   }
 
+  carColor(id?: string): string {
+    if (!id) return 'transparent';
+    return this.cars().find((c) => c.id === id)?.colorHex ?? 'transparent';
+  }
+
   startCreate(): void {
     this.editingId = null;
     this.name = '';
+    this.nickname = '';
     this.abbreviation = '';
     this.number = 1;
     this.isLegend = false;
     this.fixedCarId = '';
+    this.favoriteCarId = '';
   }
 
   startEdit(driver: Driver): void {
     this.editingId = driver.id;
     this.name = driver.name;
+    this.nickname = driver.nickname ?? '';
     this.abbreviation = driver.abbreviation;
     this.number = driver.number;
     this.isLegend = driver.isLegend;
     this.fixedCarId = driver.fixedCarId ?? '';
+    this.favoriteCarId = driver.favoriteCarId ?? '';
   }
 
   async save(): Promise<void> {
@@ -91,12 +126,19 @@ export class DriversComponent implements OnInit {
         throw new Error('Legend drivers require a fixed car.');
       }
 
+      const favoriteCarId =
+        this.isLegend && this.fixedCarId
+          ? this.fixedCarId
+          : this.favoriteCarId || undefined;
+
       const payload = {
         name: this.name.trim(),
+        nickname: this.nickname.trim() || undefined,
         abbreviation: abbr,
         number: this.number,
         isLegend: this.isLegend,
         fixedCarId: this.isLegend ? this.fixedCarId : undefined,
+        favoriteCarId,
       };
 
       if (this.editingId) {
@@ -112,7 +154,7 @@ export class DriversComponent implements OnInit {
   }
 
   async remove(driver: Driver): Promise<void> {
-    if (!confirm(`Delete driver "${driver.name}"?`)) return;
+    if (!confirm(`Delete driver "${formatDriverName(driver)}"?`)) return;
     try {
       await this.driversService.remove(driver.id);
       await this.reload();

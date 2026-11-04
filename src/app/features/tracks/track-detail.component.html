@@ -1,0 +1,56 @@
+<a routerLink="/tracks" class="heat-btn-ghost mb-4 text-sm">← {{ 'nav.tracks' | t }}</a>
+
+@if (error()) {
+  <div class="mb-4 rounded-sm border border-heat-red/40 bg-heat-red/10 px-4 py-3">{{ error() }}</div>
+}
+
+@if (loading()) {
+  <p class="text-heat-muted">{{ 'tracks.loading' | t }}</p>
+} @else if (track()) {
+  <div class="mb-8">
+    <p class="heat-subtitle">{{ track()!.country }}</p>
+    <h1 class="heat-title">{{ track()!.name }}</h1>
+  </div>
+
+  <section class="heat-panel p-5">
+    <h2 class="mb-4 font-display text-2xl">{{ 'detail.trackDrivers' | t }}</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full min-w-[420px] text-left text-sm">
+        <thead class="text-xs uppercase tracking-widest text-heat-yellow">
+          <tr>
+            <th class="py-2">{{ 'dashboard.driver' | t }}</th>
+            <th class="py-2">{{ 'dashboard.races' | t }}</th>
+            <th class="py-2">{{ 'dashboard.wins' | t }}</th>
+            <th class="py-2">{{ 'dashboard.podiums' | t }}</th>
+            <th class="py-2">{{ 'dashboard.avg' | t }}</th>
+            <th class="py-2">{{ 'detail.bestResult' | t }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of drivers(); track row.driverId) {
+            <tr class="border-b border-heat-border">
+              <td class="py-2">
+                <a [routerLink]="['/drivers', row.driverId]" class="hover:text-heat-yellow">
+                  {{ row.driverName }}
+                </a>
+              </td>
+              <td class="py-2 font-mono">{{ row.races }}</td>
+              <td class="py-2 font-mono">{{ row.wins }}</td>
+              <td class="py-2 font-mono">{{ row.podiums }}</td>
+              <td class="py-2 font-mono">
+                {{ row.avgFinish === null ? '—' : (row.avgFinish | number: '1.1-1') }}
+              </td>
+              <td class="py-2 font-mono">
+                {{ row.bestFinish === null ? '—' : 'P' + row.bestFinish }}
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6" class="py-3 text-heat-muted">—</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+}

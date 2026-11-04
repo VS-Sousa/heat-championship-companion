@@ -1,0 +1,96 @@
+<a routerLink="/cars" class="heat-btn-ghost mb-4 text-sm">← {{ 'nav.cars' | t }}</a>
+
+@if (error()) {
+  <div class="mb-4 rounded-sm border border-heat-red/40 bg-heat-red/10 px-4 py-3">{{ error() }}</div>
+}
+
+@if (loading()) {
+  <p class="text-heat-muted">{{ 'cars.loading' | t }}</p>
+} @else if (car()) {
+  <div class="mb-8 flex items-center gap-3">
+    <span
+      class="h-6 w-6 rounded-full"
+      [style.backgroundColor]="car()!.colorHex"
+    ></span>
+    <div>
+      <p class="heat-subtitle">{{ 'cars.color' | t }}</p>
+      <h1 class="heat-title">{{ car()!.name }}</h1>
+    </div>
+  </div>
+
+  <div class="grid gap-6 lg:grid-cols-2">
+    <section class="heat-panel p-5">
+      <h2 class="mb-3 font-display text-2xl">{{ 'detail.titles' | t }}</h2>
+      @for (t of titles(); track t.championshipId) {
+        <p class="border-b border-heat-border py-2 text-sm">
+          {{ t.driverName }} ·
+          <a [routerLink]="['/championships', t.championshipId]" class="hover:text-heat-yellow">
+            {{ t.championshipName }} · {{ t.season }}
+          </a>
+        </p>
+      } @empty {
+        <p class="text-heat-muted">{{ 'detail.noTitles' | t }}</p>
+      }
+    </section>
+
+    <section class="heat-panel p-5">
+      <h2 class="mb-3 font-display text-2xl">{{ 'detail.byDriver' | t }}</h2>
+      @for (row of byDriver(); track row.id) {
+        <div class="flex justify-between gap-3 border-b border-heat-border py-2 text-sm">
+          <a [routerLink]="['/drivers', row.id]" class="hover:text-heat-yellow">{{ row.label }}</a>
+          <span class="shrink-0 font-mono text-heat-muted">
+            {{ row.points }}pts · {{ row.races }}R · {{ row.podiums }}P · {{ row.wins }}W
+          </span>
+        </div>
+      } @empty {
+        <p class="text-heat-muted">—</p>
+      }
+    </section>
+
+    <section class="heat-panel p-5">
+      <h2 class="mb-3 font-display text-2xl">{{ 'detail.byTrack' | t }}</h2>
+      @for (row of byTrack(); track row.id) {
+        <div class="flex justify-between gap-3 border-b border-heat-border py-2 text-sm">
+          <a [routerLink]="['/tracks', row.id]" class="hover:text-heat-yellow">{{ row.label }}</a>
+          <span class="shrink-0 font-mono text-heat-muted">
+            {{ row.points }}pts · {{ row.races }}R · {{ row.podiums }}P · {{ row.wins }}W
+          </span>
+        </div>
+      } @empty {
+        <p class="text-heat-muted">—</p>
+      }
+    </section>
+
+    <section class="heat-panel p-5 lg:col-span-2">
+      <h2 class="mb-3 font-display text-2xl">{{ 'detail.resultHistory' | t }}</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[480px] text-left text-sm">
+          <thead class="text-xs uppercase tracking-widest text-heat-yellow">
+            <tr>
+              <th class="py-2">{{ 'logRace.racedAt' | t }}</th>
+              <th class="py-2">{{ 'logRace.driver' | t }}</th>
+              <th class="py-2">{{ 'logRace.track' | t }}</th>
+              <th class="py-2">{{ 'logRace.finish' | t }}</th>
+              <th class="py-2">{{ 'logRace.pts' | t }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of history(); track row.raceId + row.driverId) {
+              <tr class="border-b border-heat-border">
+                <td class="py-2">{{ row.racedAt || '—' }}</td>
+                <td class="py-2">
+                  <a [routerLink]="['/drivers', row.driverId]" class="hover:text-heat-yellow">
+                    {{ row.driverName }}
+                  </a>
+                </td>
+                <td class="py-2">{{ row.trackName || '—' }}</td>
+                <td class="py-2 font-mono">{{ row.dnf ? 'DNF' : row.position }}</td>
+                <td class="py-2 font-mono">{{ row.pointsAwarded }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+}

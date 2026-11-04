@@ -2,11 +2,51 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --heat-asphalt: #0b0e14;
-  --heat-red: #e1221c;
-  --heat-yellow: #f5c518;
-  --heat-cream: #f7f1e3;
+/* Manual-inspired tokens: cream paper (light) / asphalt teal (dark).
+   RGB channels so Tailwind opacity modifiers work. */
+:root,
+[data-theme='light'] {
+  --heat-bg: 243 234 214;
+  --heat-surface: 255 248 234;
+  --heat-panel: 255 253 247;
+  --heat-steel: 235 225 203;
+  --heat-ink: 26 34 48;
+  --heat-muted: 92 102 120;
+  --heat-red: 225 34 28;
+  --heat-red-hot: 255 59 48;
+  --heat-yellow: 201 133 0;
+  --heat-orange: 227 106 18;
+  --heat-navy: 28 59 92;
+  --heat-border: 28 59 92;
+  --heat-border-a: 0.18;
+  --heat-shadow: 0 0 0 1px rgba(28, 59, 92, 0.12), 0 14px 36px rgba(40, 28, 8, 0.12);
+  --heat-check-a: #e7dcc4;
+  --heat-check-b: #d9cdb3;
+  --heat-speed: rgba(201, 133, 0, 0.12);
+  --heat-halftone: rgba(28, 59, 92, 0.08);
+  --heat-paper-shine: rgba(255, 255, 255, 0.55);
+}
+
+[data-theme='dark'] {
+  --heat-bg: 13 21 28;
+  --heat-surface: 20 32 42;
+  --heat-panel: 24 38 51;
+  --heat-steel: 30 47 61;
+  --heat-ink: 244 236 218;
+  --heat-muted: 154 171 188;
+  --heat-red: 225 34 28;
+  --heat-red-hot: 255 59 48;
+  --heat-yellow: 245 197 24;
+  --heat-orange: 240 138 42;
+  --heat-navy: 35 72 110;
+  --heat-border: 245 197 24;
+  --heat-border-a: 0.22;
+  --heat-shadow: 0 0 0 1px rgba(245, 197, 24, 0.18), 0 16px 40px rgba(0, 0, 0, 0.45);
+  --heat-check-a: #121b23;
+  --heat-check-b: #1a2631;
+  --heat-speed: rgba(245, 197, 24, 0.08);
+  --heat-halftone: rgba(244, 236, 218, 0.05);
+  --heat-paper-shine: rgba(255, 255, 255, 0.03);
 }
 
 html,
@@ -16,23 +56,69 @@ body {
 
 body {
   margin: 0;
-  background-color: var(--heat-asphalt);
-  color: var(--heat-cream);
+  background-color: rgb(var(--heat-bg));
+  color: rgb(var(--heat-ink));
   font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
   letter-spacing: 0.02em;
 }
 
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.45;
+  background-image: radial-gradient(
+      circle,
+      var(--heat-halftone) 0.7px,
+      transparent 0.8px
+    ),
+    linear-gradient(180deg, var(--heat-paper-shine), transparent 42%);
+  background-size: 7px 7px, auto;
+}
+
+app-root {
+  position: relative;
+  z-index: 1;
+}
+
 @layer components {
   .heat-panel {
-    @apply rounded-sm border border-heat-yellow/30 bg-heat-carbon/90 shadow-dash;
+    @apply rounded-sm border border-heat-border bg-heat-panel shadow-dash;
+  }
+
+  .heat-tape {
+    @apply heat-panel relative;
+  }
+
+  .heat-tape::before,
+  .heat-tape::after {
+    content: '';
+    position: absolute;
+    top: -8px;
+    width: 56px;
+    height: 16px;
+    background: rgb(var(--heat-yellow) / 0.35);
+    transform: rotate(-2deg);
+    pointer-events: none;
+  }
+
+  .heat-tape::before {
+    left: 18px;
+  }
+
+  .heat-tape::after {
+    right: 18px;
+    transform: rotate(3deg);
   }
 
   .heat-input {
-    @apply w-full rounded-sm border border-heat-chrome/30 bg-heat-steel px-3 py-2 text-heat-cream outline-none transition focus:border-heat-yellow focus:ring-1 focus:ring-heat-yellow/40;
+    @apply w-full rounded-sm border border-heat-border bg-heat-steel px-3 py-2 text-heat-ink outline-none transition focus:border-heat-yellow focus:ring-1 focus:ring-heat-yellow/40;
   }
 
   .heat-label {
-    @apply mb-1 block text-xs uppercase tracking-[0.18em] text-heat-chrome;
+    @apply mb-1 block text-xs uppercase tracking-[0.18em] text-heat-muted;
   }
 
   .heat-btn {
@@ -44,18 +130,41 @@ body {
   }
 
   .heat-btn-secondary {
-    @apply heat-btn border border-heat-yellow/50 bg-transparent text-heat-yellow hover:bg-heat-yellow/10;
+    @apply heat-btn border border-heat-yellow/55 bg-transparent text-heat-yellow hover:bg-heat-yellow/10;
   }
 
   .heat-btn-ghost {
-    @apply heat-btn text-heat-chrome hover:text-heat-cream;
+    @apply heat-btn text-heat-muted hover:text-heat-ink;
+  }
+
+  .heat-chip {
+    @apply rounded-sm border border-heat-border bg-heat-steel/80 px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-heat-muted transition hover:text-heat-ink;
   }
 
   .heat-title {
-    @apply font-display text-4xl uppercase tracking-[0.12em] text-heat-cream sm:text-5xl;
+    @apply font-display text-4xl uppercase tracking-[0.12em] text-heat-ink sm:text-5xl;
   }
 
   .heat-subtitle {
     @apply font-body text-lg uppercase tracking-[0.2em] text-heat-yellow;
+  }
+
+  .heat-section-bar {
+    @apply relative overflow-hidden rounded-sm bg-heat-navy px-4 py-2 font-display text-2xl italic tracking-[0.08em] text-white;
+  }
+
+  .heat-section-bar::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.25;
+    background-image: repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 6px,
+      rgba(0, 0, 0, 0.35) 6px,
+      rgba(0, 0, 0, 0.35) 8px
+    );
+    pointer-events: none;
   }
 }

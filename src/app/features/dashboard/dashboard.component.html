@@ -1,10 +1,10 @@
 <div class="mb-8 flex flex-wrap items-end justify-between gap-4">
   <div>
-    <p class="heat-subtitle">Telemetry Deck</p>
-    <h1 class="heat-title">Dashboard</h1>
+    <p class="heat-subtitle">{{ 'dashboard.eyebrow' | t }}</p>
+    <h1 class="heat-title">{{ 'dashboard.title' | t }}</h1>
   </div>
   @if (session.isHost()) {
-    <a routerLink="/log-race" class="heat-btn-primary">Log Race</a>
+    <a routerLink="/log-race" class="heat-btn-primary">{{ 'dashboard.logRace' | t }}</a>
   }
 </div>
 
@@ -15,48 +15,68 @@
 }
 
 @if (loading()) {
-  <p class="font-mono uppercase tracking-widest text-heat-chrome">Loading telemetry…</p>
+  <p class="font-mono uppercase tracking-widest text-heat-muted">
+    {{ 'dashboard.loading' | t }}
+  </p>
 } @else {
   <div class="grid gap-6 lg:grid-cols-5">
     <section class="heat-panel p-5 lg:col-span-3">
       <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 class="font-display text-2xl tracking-[0.14em] text-heat-cream">
-          Championship Standings
+        <h2 class="font-display text-2xl tracking-[0.14em] text-heat-ink">
+          {{ 'dashboard.standings' | t }}
         </h2>
-        <select
-          class="heat-input max-w-xs"
-          [value]="selectedChampionshipId() ?? ''"
-          (change)="onChampionshipChange($any($event.target).value)"
-        >
-          <option value="">No championship</option>
-          @for (c of championships(); track c.id) {
-            <option [value]="c.id">{{ c.name }} · {{ c.season }}</option>
-          }
-        </select>
+        @if (unfinishedChampionships().length) {
+          <select
+            class="heat-input max-w-xs"
+            [value]="selectedChampionshipId() ?? ''"
+            (change)="onChampionshipChange($any($event.target).value)"
+          >
+            @for (c of unfinishedChampionships(); track c.id) {
+              <option [value]="c.id">{{ c.name }} · E{{ c.editionNumber }}</option>
+            }
+          </select>
+        }
       </div>
 
-      @if (!standings().length) {
-        <p class="text-heat-chrome">No race results for this championship yet.</p>
+      @if (!unfinishedChampionships().length) {
+        <p class="text-heat-muted">{{ 'dashboard.noChampionship' | t }}</p>
+      } @else if (!standings().length) {
+        <p class="text-heat-muted">{{ 'dashboard.noResults' | t }}</p>
       } @else {
         <div class="overflow-x-auto">
           <table class="w-full min-w-[420px] text-left text-sm">
-            <thead class="border-b border-heat-yellow/20 text-xs uppercase tracking-[0.16em] text-heat-yellow">
+            <thead
+              class="border-b border-heat-border text-xs uppercase tracking-[0.16em] text-heat-yellow"
+            >
               <tr>
-                <th class="py-2 pr-2">Pos</th>
-                <th class="py-2 pr-2">Driver</th>
-                <th class="py-2 pr-2">Pts</th>
-                <th class="py-2 pr-2">Wins</th>
-                <th class="py-2">Podiums</th>
+                <th class="py-2 pr-2">{{ 'dashboard.pos' | t }}</th>
+                <th class="py-2 pr-2">{{ 'dashboard.driver' | t }}</th>
+                <th class="py-2 pr-2">{{ 'dashboard.pts' | t }}</th>
+                <th class="py-2 pr-2">{{ 'dashboard.wins' | t }}</th>
+                <th class="py-2">{{ 'dashboard.podiums' | t }}</th>
               </tr>
             </thead>
             <tbody>
               @for (row of standings(); track row.driverId; let i = $index) {
-                <tr class="border-b border-white/5">
+                <tr class="border-b border-heat-border">
                   <td class="py-2 pr-2 font-mono text-heat-yellow">{{ i + 1 }}</td>
                   <td class="py-2 pr-2">
-                    <span class="font-mono text-heat-chrome">#{{ row.number | number: '2.0-0' }}</span>
-                    {{ row.driverName }}
-                    <span class="ml-1 text-xs text-heat-chrome">({{ row.abbreviation }})</span>
+                    <span class="font-mono text-heat-muted"
+                      >#{{ row.number | number: '2.0-0' }}</span
+                    >
+                    <a
+                      [routerLink]="['/drivers', row.driverId]"
+                      class="hover:text-heat-yellow"
+                    >
+                      {{ formatDriverName(row) }}
+                    </a>
+                    @if (showTitleFight() && row.inTitleFight) {
+                      <span
+                        class="ml-2 text-[10px] uppercase tracking-widest text-heat-yellow"
+                      >
+                        {{ 'standings.titleFight' | t }}
+                      </span>
+                    }
                   </td>
                   <td class="py-2 pr-2 font-mono">{{ row.points }}</td>
                   <td class="py-2 pr-2 font-mono">{{ row.wins }}</td>
@@ -70,29 +90,86 @@
     </section>
 
     <section class="heat-panel p-5 lg:col-span-2">
-      <h2 class="mb-4 font-display text-2xl tracking-[0.14em]">Driver Form</h2>
+      <h2 class="mb-4 font-display text-2xl tracking-[0.14em]">
+        {{ 'dashboard.titlesHall' | t }}
+      </h2>
+      <div class="mb-4">
+        <app-driver-kind-filter
+          [value]="hallFilter()"
+          (valueChange)="hallFilter.set($event)"
+        />
+      </div>
       <div class="space-y-3">
-        @for (d of driverStats(); track d.driverId) {
-          <div class="flex items-center justify-between gap-3 border-b border-white/5 pb-2">
+        @for (row of filteredHall(); track row.driverId) {
+          <div class="flex items-center justify-between gap-3 border-b border-heat-border pb-2">
             <div>
-              <p class="text-heat-cream">{{ d.driverName }}</p>
-              <p class="font-mono text-xs text-heat-chrome">
-                {{ d.races }} races · avg {{ d.avgFinish === null ? '—' : (d.avgFinish | number: '1.1-1') }}
+              <a
+                [routerLink]="['/drivers', row.driverId]"
+                class="text-heat-ink hover:text-heat-yellow"
+              >
+                {{ row.driverName }}
+              </a>
+              <p class="font-mono text-xs text-heat-muted">
+                @if (row.lastTitleSeason) {
+                  {{ row.lastTitleSeason }}
+                  @if (row.lastTitleCarName) {
+                    · {{ row.lastTitleCarName }}
+                  }
+                }
+              </p>
+            </div>
+            <p class="font-mono text-heat-yellow">{{ row.titles }}×</p>
+          </div>
+        } @empty {
+          <p class="text-heat-muted">{{ 'dashboard.noTitlesYet' | t }}</p>
+        }
+      </div>
+    </section>
+
+    <section class="heat-panel p-5 lg:col-span-2">
+      <h2 class="mb-4 font-display text-2xl tracking-[0.14em]">
+        {{ 'dashboard.driverForm' | t }}
+      </h2>
+      <div class="mb-4">
+        <app-driver-kind-filter
+          [value]="formFilter()"
+          (valueChange)="formFilter.set($event)"
+        />
+      </div>
+      <div class="space-y-3">
+        @for (d of filteredDriverStats(); track d.driverId) {
+          <div class="flex items-center justify-between gap-3 border-b border-heat-border pb-2">
+            <div>
+              <a
+                [routerLink]="['/drivers', d.driverId]"
+                class="text-heat-ink hover:text-heat-yellow"
+              >
+                {{ d.driverName }}
+              </a>
+              <p class="font-mono text-xs text-heat-muted">
+                {{ d.races }} {{ 'dashboard.races' | t }} ·
+                {{ 'dashboard.avg' | t }}
+                {{ d.avgFinish === null ? '—' : (d.avgFinish | number: '1.1-1') }}
               </p>
             </div>
             <p class="font-mono text-heat-yellow">{{ d.wins }}W</p>
           </div>
         } @empty {
-          <p class="text-heat-chrome">No driver stats yet.</p>
+          <p class="text-heat-muted">{{ 'dashboard.noDriverStats' | t }}</p>
         }
       </div>
     </section>
 
-    <section class="heat-panel p-5 lg:col-span-5">
-      <h2 class="mb-4 font-display text-2xl tracking-[0.14em]">Car Performance</h2>
-      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <section class="heat-panel p-5 lg:col-span-3">
+      <h2 class="mb-4 font-display text-2xl tracking-[0.14em]">
+        {{ 'dashboard.carPerf' | t }}
+      </h2>
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         @for (car of carStats(); track car.carId) {
-          <div class="rounded-sm border border-white/10 bg-heat-steel/60 p-3">
+          <a
+            [routerLink]="['/cars', car.carId]"
+            class="rounded-sm border border-heat-border bg-heat-steel/60 p-3 hover:border-heat-yellow/50"
+          >
             <div class="mb-2 flex items-center gap-2">
               <span
                 class="h-3 w-3 rounded-full"
@@ -100,12 +177,13 @@
               ></span>
               <p class="font-display text-xl tracking-wider">{{ car.carName }}</p>
             </div>
-            <p class="font-mono text-xs uppercase tracking-widest text-heat-chrome">
-              {{ car.races }} races · {{ car.wins }} wins · {{ car.podiums }} podiums
+            <p class="font-mono text-xs uppercase tracking-widest text-heat-muted">
+              {{ car.races }} {{ 'dashboard.races' | t }} · {{ car.wins }}W ·
+              {{ car.podiums }} {{ 'dashboard.podiums' | t }}
             </p>
-          </div>
+          </a>
         } @empty {
-          <p class="text-heat-chrome">No car telemetry yet.</p>
+          <p class="text-heat-muted">{{ 'dashboard.noCarStats' | t }}</p>
         }
       </div>
     </section>

@@ -1,19 +1,29 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: ['./src/**/*.{html,ts}'],
+  darkMode: ['selector', '[data-theme="dark"]'],
   theme: {
     extend: {
       colors: {
         heat: {
-          asphalt: '#0B0E14',
-          carbon: '#151A24',
-          steel: '#1E2636',
-          red: '#E1221C',
-          'red-hot': '#FF3B30',
-          yellow: '#F5C518',
-          cream: '#F7F1E3',
-          chrome: '#C8D0DC',
-          track: '#2A3344',
+          bg: 'rgb(var(--heat-bg) / <alpha-value>)',
+          surface: 'rgb(var(--heat-surface) / <alpha-value>)',
+          panel: 'rgb(var(--heat-panel) / <alpha-value>)',
+          steel: 'rgb(var(--heat-steel) / <alpha-value>)',
+          ink: 'rgb(var(--heat-ink) / <alpha-value>)',
+          muted: 'rgb(var(--heat-muted) / <alpha-value>)',
+          red: 'rgb(var(--heat-red) / <alpha-value>)',
+          'red-hot': 'rgb(var(--heat-red-hot) / <alpha-value>)',
+          yellow: 'rgb(var(--heat-yellow) / <alpha-value>)',
+          orange: 'rgb(var(--heat-orange) / <alpha-value>)',
+          navy: 'rgb(var(--heat-navy) / <alpha-value>)',
+          border: 'rgb(var(--heat-border) / var(--heat-border-a))',
+          // legacy aliases used across templates
+          asphalt: 'rgb(var(--heat-bg) / <alpha-value>)',
+          carbon: 'rgb(var(--heat-surface) / <alpha-value>)',
+          cream: 'rgb(var(--heat-ink) / <alpha-value>)',
+          chrome: 'rgb(var(--heat-muted) / <alpha-value>)',
+          track: 'rgb(var(--heat-navy) / <alpha-value>)',
         },
       },
       fontFamily: {
@@ -22,13 +32,14 @@ module.exports = {
         mono: ['"Share Tech Mono"', 'ui-monospace', 'monospace'],
       },
       boxShadow: {
-        dash: '0 0 0 1px rgba(245, 197, 24, 0.25), 0 12px 40px rgba(0,0,0,0.45)',
+        dash: 'var(--heat-shadow)',
+        tape: '0 2px 0 rgba(0,0,0,0.08), 0 10px 28px rgba(0,0,0,0.12)',
       },
       backgroundImage: {
-        'checkered':
-          'repeating-conic-gradient(#1a1a1a 0% 25%, #2a2a2a 0% 50%) 50% / 24px 24px',
+        checkered:
+          'repeating-conic-gradient(var(--heat-check-a) 0% 25%, var(--heat-check-b) 0% 50%) 50% / 22px 22px',
         'speed-lines':
-          'linear-gradient(105deg, transparent 40%, rgba(245,197,24,0.08) 50%, transparent 60%)',
+          'linear-gradient(105deg, transparent 40%, var(--heat-speed) 50%, transparent 60%)',
       },
     },
   },

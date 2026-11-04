@@ -1,13 +1,15 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { Track } from '../../core/models/domain.models';
 import { TracksService } from '../../core/services/tracks.service';
 import { SessionService } from '../../core/services/session.service';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 
 @Component({
   selector: 'app-tracks',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, TranslatePipe, RouterLink],
   templateUrl: './tracks.component.html',
   styleUrl: './tracks.component.css',
 })

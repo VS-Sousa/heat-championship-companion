@@ -1,18 +1,21 @@
-<div class="min-h-screen bg-heat-asphalt bg-speed-lines">
-  <header class="border-b border-heat-yellow/20 bg-heat-carbon/95 backdrop-blur">
+<div class="min-h-screen bg-heat-bg bg-speed-lines">
+  <header
+    class="border-b bg-heat-surface/95 backdrop-blur"
+    style="border-color: var(--heat-border)"
+  >
     <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
       <a routerLink="/dashboard" class="group flex items-center gap-3">
         <span
-          class="flex h-10 w-10 items-center justify-center rounded-sm bg-heat-red font-display text-2xl text-white shadow-[0_0_20px_rgba(225,34,28,0.45)]"
+          class="flex h-10 w-10 items-center justify-center rounded-sm bg-heat-red font-display text-2xl text-white"
         >
           H
         </span>
         <div>
-          <p class="font-display text-2xl leading-none tracking-[0.18em] text-heat-cream">
-            Heat
+          <p class="font-display text-2xl leading-none tracking-[0.18em] text-heat-red">
+            {{ 'brand.name' | t }}
           </p>
           <p class="text-[11px] uppercase tracking-[0.28em] text-heat-yellow">
-            Championship Companion
+            {{ 'brand.tagline' | t }}
           </p>
         </div>
       </a>
@@ -22,36 +25,119 @@
           <a
             [routerLink]="link.path"
             routerLinkActive="bg-heat-yellow/15 text-heat-yellow"
-            class="rounded-sm px-3 py-2 text-sm uppercase tracking-[0.16em] text-heat-chrome transition hover:text-heat-cream"
+            class="rounded-sm p-2.5 text-heat-muted transition hover:text-heat-ink"
+            [attr.title]="link.labelKey | t"
+            [attr.aria-label]="link.labelKey | t"
           >
-            {{ link.label }}
+            <svg
+              class="h-5 w-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.75"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              @switch (link.icon) {
+                @case ('dashboard') {
+                  <rect x="3" y="3" width="7" height="9" />
+                  <rect x="14" y="3" width="7" height="5" />
+                  <rect x="14" y="12" width="7" height="9" />
+                  <rect x="3" y="16" width="7" height="5" />
+                }
+                @case ('championships') {
+                  <path d="M8 21h8" />
+                  <path d="M12 17v4" />
+                  <path d="M7 4h10v5a5 5 0 0 1-10 0V4Z" />
+                  <path d="M17 6h2a2 2 0 0 1 0 4h-2" />
+                  <path d="M7 6H5a2 2 0 0 0 0 4h2" />
+                }
+                @case ('drivers') {
+                  <circle cx="12" cy="8" r="4" />
+                  <path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6" />
+                }
+                @case ('cars') {
+                  <path d="M3 14h18" />
+                  <path d="M5 14l1.5-5a2 2 0 0 1 1.9-1.4h7.2a2 2 0 0 1 1.9 1.4L19 14" />
+                  <circle cx="7.5" cy="16.5" r="1.5" />
+                  <circle cx="16.5" cy="16.5" r="1.5" />
+                  <path d="M7 9h10" />
+                }
+                @case ('tracks') {
+                  <path d="M4 15c2-1 4-1 6 0s4 1 6 0 4-1 6 0" />
+                  <path d="M4 19c2-1 4-1 6 0s4 1 6 0 4-1 6 0" />
+                  <path d="M14 4l6 3-6 3V4Z" />
+                  <path d="M14 4v11" />
+                }
+                @case ('logRace') {
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 7v5l3 2" />
+                }
+              }
+            </svg>
           </a>
         }
       </nav>
 
       <div class="flex items-center gap-3">
+        <app-prefs-bar />
         <div class="hidden text-right sm:block">
           <p class="font-mono text-xs uppercase tracking-widest text-heat-yellow">
-            {{ session.role() }}
+            {{ roleLabel() }}
           </p>
-          <p class="text-sm text-heat-cream">{{ session.username() }}</p>
+          <p class="text-sm text-heat-ink">{{ displayName() }}</p>
         </div>
-        <button type="button" class="heat-btn-ghost text-sm" (click)="disconnect()">
-          Disconnect
+        <button
+          type="button"
+          class="heat-btn-ghost p-2.5"
+          (click)="disconnect()"
+          [attr.title]="'nav.disconnect' | t"
+          [attr.aria-label]="'nav.disconnect' | t"
+        >
+          <svg
+            class="h-5 w-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <path d="M16 17l5-5-5-5" />
+            <path d="M21 12H9" />
+          </svg>
         </button>
         <button
           type="button"
-          class="heat-btn-secondary px-3 py-1 md:hidden"
+          class="heat-btn-secondary p-2.5 md:hidden"
           (click)="menuOpen = !menuOpen"
           [attr.aria-expanded]="menuOpen"
+          [attr.title]="'nav.menu' | t"
+          [attr.aria-label]="'nav.menu' | t"
         >
-          Menu
+          <svg
+            class="h-5 w-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <path d="M4 7h16" />
+            <path d="M4 12h16" />
+            <path d="M4 17h16" />
+          </svg>
         </button>
       </div>
     </div>
 
     <div
-      class="border-t border-heat-yellow/10 px-4 py-2 md:hidden"
+      class="border-t px-4 py-2 md:hidden"
+      style="border-color: var(--heat-border)"
       [ngClass]="{ hidden: !menuOpen }"
     >
       <div class="flex flex-col gap-1">
@@ -59,10 +145,57 @@
           <a
             [routerLink]="link.path"
             routerLinkActive="text-heat-yellow"
-            class="rounded-sm px-2 py-2 uppercase tracking-[0.16em] text-heat-chrome"
+            class="flex items-center gap-3 rounded-sm px-2 py-2 text-heat-muted"
             (click)="menuOpen = false"
           >
-            {{ link.label }}
+            <svg
+              class="h-5 w-5 shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.75"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              @switch (link.icon) {
+                @case ('dashboard') {
+                  <rect x="3" y="3" width="7" height="9" />
+                  <rect x="14" y="3" width="7" height="5" />
+                  <rect x="14" y="12" width="7" height="9" />
+                  <rect x="3" y="16" width="7" height="5" />
+                }
+                @case ('championships') {
+                  <path d="M8 21h8" />
+                  <path d="M12 17v4" />
+                  <path d="M7 4h10v5a5 5 0 0 1-10 0V4Z" />
+                  <path d="M17 6h2a2 2 0 0 1 0 4h-2" />
+                  <path d="M7 6H5a2 2 0 0 0 0 4h2" />
+                }
+                @case ('drivers') {
+                  <circle cx="12" cy="8" r="4" />
+                  <path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6" />
+                }
+                @case ('cars') {
+                  <path d="M3 14h18" />
+                  <path d="M5 14l1.5-5a2 2 0 0 1 1.9-1.4h7.2a2 2 0 0 1 1.9 1.4L19 14" />
+                  <circle cx="7.5" cy="16.5" r="1.5" />
+                  <circle cx="16.5" cy="16.5" r="1.5" />
+                  <path d="M7 9h10" />
+                }
+                @case ('tracks') {
+                  <path d="M4 15c2-1 4-1 6 0s4 1 6 0 4-1 6 0" />
+                  <path d="M4 19c2-1 4-1 6 0s4 1 6 0 4-1 6 0" />
+                  <path d="M14 4l6 3-6 3V4Z" />
+                  <path d="M14 4v11" />
+                }
+                @case ('logRace') {
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 7v5l3 2" />
+                }
+              }
+            </svg>
+            <span class="uppercase tracking-[0.16em]">{{ link.labelKey | t }}</span>
           </a>
         }
       </div>

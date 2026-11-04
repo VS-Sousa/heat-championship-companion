@@ -1,37 +1,68 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Championship, StandingRow } from '../../core/models/domain.models';
+import { RouterLink } from '@angular/router';
+import {
+  Championship,
+  PlannedRoundInput,
+  StandingRow,
+  Track,
+} from '../../core/models/domain.models';
 import { ChampionshipsService } from '../../core/services/championships.service';
+import { TracksService } from '../../core/services/tracks.service';
 import { SessionService } from '../../core/services/session.service';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { TrackRaffleModalComponent } from '../../shared/components/track-raffle/track-raffle-modal.component';
+import { formatDriverName } from '../../core/utils/driver-display';
 
 const DEFAULT_POINTS = '10,8,6,5,4,3,2,1';
+
+interface CalendarDraft {
+  roundNumber: number;
+  trackId: string;
+}
 
 @Component({
   selector: 'app-championships',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink, TranslatePipe, TrackRaffleModalComponent],
   templateUrl: './championships.component.html',
   styleUrl: './championships.component.css',
 })
 export class ChampionshipsComponent implements OnInit {
   private readonly championshipsService = inject(ChampionshipsService);
+  private readonly tracksService = inject(TracksService);
   readonly session = inject(SessionService);
 
   readonly championships = signal<Championship[]>([]);
+  readonly tracks = signal<Track[]>([]);
   readonly standings = signal<StandingRow[]>([]);
   readonly error = signal<string | null>(null);
   readonly loading = signal(true);
+  readonly formOpen = signal(false);
+
+  readonly sortedChampionships = computed(() => {
+    const list = [...this.championships()];
+    return list.sort((a, b) => {
+      const aFinished = !a.isActive || !!a.finishedAt;
+      const bFinished = !b.isActive || !!b.finishedAt;
+      if (aFinished !== bFinished) return aFinished ? 1 : -1;
+      return 0;
+    });
+  });
 
   editingId: string | null = null;
   viewingId: string | null = null;
   name = '';
-  season = '';
   pointSystemText = DEFAULT_POINTS;
   useGarage = false;
-  useWeather = false;
-  useLegends = false;
-  useHeavyRain = false;
-  isActive = true;
+  useEvents = false;
+  usePress = false;
+  useSponsorship = false;
+  successionOfId = '';
+  calendar: CalendarDraft[] = [{ roundNumber: 1, trackId: '' }];
+  raffleRoundIndex: number | null = null;
+
+  readonly formatDriverName = formatDriverName;
 
   async ngOnInit(): Promise<void> {
     await this.reload();
@@ -41,7 +72,12 @@ export class ChampionshipsComponent implements OnInit {
     this.loading.set(true);
     this.error.set(null);
     try {
-      this.championships.set(await this.championshipsService.list());
+      const [championships, tracks] = await Promise.all([
+        this.championshipsService.list(),
+        this.tracksService.list(),
+      ]);
+      this.championships.set(championships);
+      this.tracks.set(tracks);
     } catch (err) {
       this.error.set(
         err instanceof Error ? err.message : 'Failed to load championships.'
@@ -51,28 +87,71 @@ export class ChampionshipsComponent implements OnInit {
     }
   }
 
-  startCreate(): void {
+  resetForm(): void {
     this.editingId = null;
     this.name = '';
-    this.season = '';
     this.pointSystemText = DEFAULT_POINTS;
     this.useGarage = false;
-    this.useWeather = false;
-    this.useLegends = false;
-    this.useHeavyRain = false;
-    this.isActive = true;
+    this.useEvents = false;
+    this.usePress = false;
+    this.useSponsorship = false;
+    this.successionOfId = '';
+    this.calendar = [{ roundNumber: 1, trackId: '' }];
+    this.raffleRoundIndex = null;
+  }
+
+  startCreate(): void {
+    this.resetForm();
+    this.formOpen.set(true);
   }
 
   startEdit(c: Championship): void {
     this.editingId = c.id;
     this.name = c.name;
-    this.season = c.season;
     this.pointSystemText = c.pointSystem.join(',');
     this.useGarage = c.useGarage;
-    this.useWeather = c.useWeather;
-    this.useLegends = c.useLegends;
-    this.useHeavyRain = c.useHeavyRain;
-    this.isActive = c.isActive;
+    this.useEvents = c.useEvents;
+    this.usePress = c.usePress;
+    this.useSponsorship = c.useSponsorship;
+    this.successionOfId = '';
+    this.calendar = [{ roundNumber: 1, trackId: '' }];
+    this.raffleRoundIndex = null;
+    this.formOpen.set(true);
+  }
+
+  closeForm(): void {
+    this.formOpen.set(false);
+    this.resetForm();
+  }
+
+  addRound(): void {
+    this.calendar = [
+      ...this.calendar,
+      { roundNumber: this.calendar.length + 1, trackId: '' },
+    ];
+  }
+
+  removeRound(index: number): void {
+    if (this.calendar.length <= 1) return;
+    this.calendar = this.calendar
+      .filter((_, i) => i !== index)
+      .map((round, i) => ({ ...round, roundNumber: i + 1 }));
+  }
+
+  openRaffle(index: number): void {
+    this.raffleRoundIndex = index;
+  }
+
+  closeRaffle(): void {
+    this.raffleRoundIndex = null;
+  }
+
+  onTrackRaffled(trackId: string): void {
+    if (this.raffleRoundIndex === null) return;
+    this.calendar = this.calendar.map((round, i) =>
+      i === this.raffleRoundIndex ? { ...round, trackId } : round
+    );
+    this.raffleRoundIndex = null;
   }
 
   async viewStandings(c: Championship): Promise<void> {
@@ -86,6 +165,16 @@ export class ChampionshipsComponent implements OnInit {
     }
   }
 
+  async finalize(c: Championship): Promise<void> {
+    if (!confirm(`Finalize "${c.name}"?`)) return;
+    try {
+      await this.championshipsService.finalizeChampionship(c.id);
+      await this.reload();
+    } catch (err) {
+      this.error.set(err instanceof Error ? err.message : 'Finalize failed.');
+    }
+  }
+
   async save(): Promise<void> {
     this.error.set(null);
     try {
@@ -94,34 +183,64 @@ export class ChampionshipsComponent implements OnInit {
         .map((v) => Number(v.trim()))
         .filter((n) => !Number.isNaN(n));
 
-      if (!this.name.trim() || !this.season.trim()) {
-        throw new Error('Name and season are required.');
+      if (!this.name.trim()) {
+        throw new Error('Name is required.');
       }
       if (!pointSystem.length) {
         throw new Error('Point system must include at least one value.');
       }
 
-      const payload = {
-        name: this.name.trim(),
-        season: this.season.trim(),
-        pointSystem,
-        useGarage: this.useGarage,
-        useWeather: this.useWeather,
-        useLegends: this.useLegends,
-        useHeavyRain: this.useHeavyRain,
-        isActive: this.isActive,
-      };
+      const season = await this.resolveSeason(this.editingId, this.successionOfId);
 
       if (this.editingId) {
-        await this.championshipsService.update(this.editingId, payload);
+        await this.championshipsService.update(this.editingId, {
+          name: this.name.trim(),
+          season,
+          pointSystem,
+          useGarage: this.useGarage,
+          useEvents: this.useEvents,
+          usePress: this.usePress,
+          useSponsorship: this.useSponsorship,
+          isActive: true,
+        });
       } else {
-        await this.championshipsService.create(payload);
+        const calendar: PlannedRoundInput[] = this.calendar.map((round) => ({
+          roundNumber: round.roundNumber,
+          trackId: round.trackId || undefined,
+        }));
+        await this.championshipsService.createWithCalendar({
+          name: this.name.trim(),
+          season,
+          pointSystem,
+          useGarage: this.useGarage,
+          useEvents: this.useEvents,
+          usePress: this.usePress,
+          useSponsorship: this.useSponsorship,
+          successionOfId: this.successionOfId || undefined,
+          calendar,
+        });
       }
-      this.startCreate();
+      this.closeForm();
       await this.reload();
     } catch (err) {
       this.error.set(err instanceof Error ? err.message : 'Save failed.');
     }
+  }
+
+  private async resolveSeason(
+    editingId: string | null,
+    successionOfId: string
+  ): Promise<string> {
+    if (editingId) {
+      const existing = this.championships().find((c) => c.id === editingId);
+      return existing?.season || String(new Date().getFullYear());
+    }
+    if (successionOfId) {
+      const previous = this.championships().find((c) => c.id === successionOfId);
+      const year = Number(previous?.season);
+      if (previous && !Number.isNaN(year)) return String(year + 1);
+    }
+    return String(new Date().getFullYear());
   }
 
   async remove(c: Championship): Promise<void> {

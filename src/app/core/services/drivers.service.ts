@@ -17,16 +17,29 @@ export class DriversService {
     return (data ?? []).map((row) => mapDriver(row as Record<string, unknown>));
   }
 
+  async getById(id: string): Promise<Driver | null> {
+    const { data, error } = await this.supabase
+      .getClient()
+      .from('drivers')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return data ? mapDriver(data as Record<string, unknown>) : null;
+  }
+
   async create(input: Omit<Driver, 'id'>): Promise<Driver> {
     const { data, error } = await this.supabase
       .getClient()
       .from('drivers')
       .insert({
         name: input.name,
+        nickname: input.nickname?.trim() || null,
         abbreviation: input.abbreviation.toUpperCase(),
         number: input.number,
         is_legend: input.isLegend,
         fixed_car_id: input.fixedCarId ?? null,
+        favorite_car_id: input.favoriteCarId ?? null,
         user_id: input.userId ?? null,
       })
       .select('*')
@@ -41,10 +54,12 @@ export class DriversService {
       .from('drivers')
       .update({
         name: input.name,
+        nickname: input.nickname?.trim() || null,
         abbreviation: input.abbreviation.toUpperCase(),
         number: input.number,
         is_legend: input.isLegend,
         fixed_car_id: input.fixedCarId ?? null,
+        favorite_car_id: input.favoriteCarId ?? null,
         user_id: input.userId ?? null,
       })
       .eq('id', id)

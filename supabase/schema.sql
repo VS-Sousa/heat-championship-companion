@@ -31,11 +31,12 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
 
--- 2. Cars
+-- 2. Cars (unique color_hex per car; color_key mirrors normalized hex)
 create table public.cars (
   id uuid default gen_random_uuid() primary key,
   name text not null,
-  color_hex text not null,
+  color_key text not null,
+  color_hex text not null unique,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -43,10 +44,12 @@ create table public.cars (
 create table public.drivers (
   id uuid default gen_random_uuid() primary key,
   name text not null,
+  nickname text,
   abbreviation varchar(3) not null unique,
   number int not null check (number >= 0 and number <= 99),
   is_legend boolean default false not null,
   fixed_car_id uuid references public.cars(id) on delete set null,
+  favorite_car_id uuid references public.cars(id) on delete set null,
   user_id uuid references public.profiles(id) on delete set null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
@@ -59,28 +62,35 @@ create table public.tracks (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 5. Championships
+-- 5. Championships (series + editions)
 create table public.championships (
   id uuid default gen_random_uuid() primary key,
   name text not null,
   season text not null,
+  series_id uuid not null default gen_random_uuid(),
+  edition_number int not null default 1,
   point_system integer[] not null,
   use_garage boolean default false,
-  use_weather boolean default false,
-  use_legends boolean default false,
-  use_heavy_rain boolean default false,
+  use_events boolean default false,
+  use_press boolean default false,
+  use_sponsorship boolean default false,
   is_active boolean default true,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+  finished_at timestamp with time zone,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  unique (series_id, edition_number)
 );
 
--- 6. Races
+-- 6. Races (planned calendar, completed, cancelled, or standalone)
 create table public.races (
   id uuid default gen_random_uuid() primary key,
   championship_id uuid references public.championships(id) on delete cascade,
-  track_id uuid references public.tracks(id) on delete restrict not null,
+  track_id uuid references public.tracks(id) on delete restrict,
   round_number int,
   race_type text not null check (race_type in ('championship', 'standalone')) default 'championship',
+  status text not null check (status in ('planned', 'completed', 'cancelled')) default 'completed',
   weather_condition text,
+  track_condition text,
+  raced_at date,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -121,7 +131,6 @@ create policy "Auth Write Championships" on public.championships for all to auth
 create policy "Auth Write Races" on public.races for all to authenticated using (true) with check (true);
 create policy "Auth Write Race Results" on public.race_results for all to authenticated using (true) with check (true);
 
--- Authenticated users can read/update own profile; admins can manage roles later in dashboard/SQL
 create policy "Users update own profile" on public.profiles
   for update to authenticated
   using (auth.uid() = id)

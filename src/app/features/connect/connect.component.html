@@ -7,13 +7,21 @@
     class="pointer-events-none absolute -right-16 bottom-0 h-80 w-80 rounded-full bg-heat-yellow/10 blur-3xl"
   ></div>
 
-  <section class="heat-panel relative z-10 w-full max-w-xl p-6 sm:p-8">
-    <p class="heat-subtitle mb-2">Bring Your Own Supabase</p>
-    <h1 class="heat-title mb-2">Heat</h1>
-    <p class="mb-8 max-w-md text-heat-chrome">
-      Connect to your league database to track championships, races, drivers and
-      car telemetry.
-    </p>
+  <div class="absolute right-4 top-4 z-20 sm:right-6 sm:top-6">
+    <app-prefs-bar />
+  </div>
+
+  <section class="heat-tape relative z-10 w-full max-w-xl p-6 sm:p-8">
+    <div class="mb-6 flex items-start justify-between gap-3">
+      <div>
+        <p class="heat-subtitle mb-2">{{ 'connect.eyebrow' | t }}</p>
+        <h1 class="heat-title mb-2 text-heat-red">{{ 'connect.title' | t }}</h1>
+        <p class="max-w-md text-heat-muted">{{ 'connect.lead' | t }}</p>
+      </div>
+      <a routerLink="/" class="heat-btn-ghost shrink-0 text-sm">
+        {{ 'nav.backHome' | t }}
+      </a>
+    </div>
 
     <div class="mb-6 grid grid-cols-2 gap-2">
       <button
@@ -22,11 +30,12 @@
         [ngClass]="
           mode === 'guest'
             ? 'border-heat-yellow bg-heat-yellow/15 text-heat-yellow'
-            : 'border-white/20 text-heat-chrome'
+            : 'text-heat-muted'
         "
+        [style.border-color]="mode === 'guest' ? undefined : 'var(--heat-border)'"
         (click)="mode = 'guest'"
       >
-        Guest
+        {{ 'connect.guest' | t }}
       </button>
       <button
         type="button"
@@ -34,17 +43,18 @@
         [ngClass]="
           mode === 'host'
             ? 'border-heat-yellow bg-heat-yellow/15 text-heat-yellow'
-            : 'border-white/20 text-heat-chrome'
+            : 'text-heat-muted'
         "
+        [style.border-color]="mode === 'host' ? undefined : 'var(--heat-border)'"
         (click)="mode = 'host'"
       >
-        Host / Admin
+        {{ 'connect.host' | t }}
       </button>
     </div>
 
     <form class="space-y-4" (ngSubmit)="submit()">
       <div>
-        <label class="heat-label" for="url">Supabase URL</label>
+        <label class="heat-label" for="url">{{ 'connect.url' | t }}</label>
         <input
           id="url"
           class="heat-input font-mono text-sm"
@@ -56,20 +66,25 @@
       </div>
 
       <div>
-        <label class="heat-label" for="anonKey">Anon Key</label>
+        <label class="heat-label" for="publishableKey">
+          {{ 'connect.publishableKey' | t }}
+        </label>
         <input
-          id="anonKey"
+          id="publishableKey"
           class="heat-input font-mono text-sm"
-          name="anonKey"
-          [(ngModel)]="anonKey"
-          placeholder="eyJhbGciOi..."
+          name="publishableKey"
+          [(ngModel)]="publishableKey"
+          placeholder="sb_publishable_..."
           autocomplete="off"
         />
+        <p class="mt-1 text-[11px] leading-snug text-heat-muted">
+          {{ 'connect.publishableHint' | t }}
+        </p>
       </div>
 
       @if (mode === 'host') {
         <div>
-          <label class="heat-label" for="email">Email</label>
+          <label class="heat-label" for="email">{{ 'connect.email' | t }}</label>
           <input
             id="email"
             class="heat-input"
@@ -80,7 +95,7 @@
           />
         </div>
         <div>
-          <label class="heat-label" for="password">Password</label>
+          <label class="heat-label" for="password">{{ 'connect.password' | t }}</label>
           <input
             id="password"
             class="heat-input"
@@ -94,7 +109,7 @@
 
       @if (error()) {
         <div
-          class="rounded-sm border border-heat-red/50 bg-heat-red/10 px-3 py-2 text-sm text-heat-cream"
+          class="rounded-sm border border-heat-red/50 bg-heat-red/10 px-3 py-2 text-sm text-heat-ink"
           role="alert"
         >
           {{ error() }}
@@ -106,12 +121,18 @@
         class="heat-btn-primary w-full"
         [disabled]="loading()"
       >
-        {{ loading() ? 'Connecting…' : mode === 'guest' ? 'Enter as Guest' : 'Sign In' }}
+        @if (loading()) {
+          {{ 'connect.connecting' | t }}
+        } @else if (mode === 'guest') {
+          {{ 'connect.submitGuest' | t }}
+        } @else {
+          {{ 'connect.submitHost' | t }}
+        }
       </button>
     </form>
 
-    <p class="mt-6 text-xs uppercase tracking-[0.18em] text-heat-chrome/70">
-      Session expires automatically after 24 hours
+    <p class="mt-6 text-xs uppercase tracking-[0.18em] text-heat-muted/80">
+      {{ 'connect.sessionNote' | t }}
     </p>
   </section>
 </div>

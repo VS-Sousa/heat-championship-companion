@@ -1,10 +1,14 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR" data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <title>Heat Championship Companion</title>
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Companion app for Heat: Pedal to the Metal championships — standings, garage, drivers and race logging."
+    />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -12,6 +16,27 @@
       href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Bebas+Neue&family=Share+Tech+Mono&display=swap"
       rel="stylesheet"
     />
+    <script>
+      (function () {
+        try {
+          var theme = localStorage.getItem('heat_theme');
+          if (theme !== 'light' && theme !== 'dark') {
+            theme = window.matchMedia('(prefers-color-scheme: light)').matches
+              ? 'light'
+              : 'dark';
+          }
+          document.documentElement.setAttribute('data-theme', theme);
+          var lang = localStorage.getItem('heat_lang');
+          if (lang === 'pt-BR' || lang === 'en') {
+            document.documentElement.lang = lang === 'pt-BR' ? 'pt-BR' : 'en';
+          } else if ((navigator.language || '').toLowerCase().indexOf('pt') === 0) {
+            document.documentElement.lang = 'pt-BR';
+          } else {
+            document.documentElement.lang = 'en';
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <app-root></app-root>

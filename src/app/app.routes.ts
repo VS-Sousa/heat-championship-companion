@@ -8,6 +8,14 @@ import { ShellComponent } from './shared/components/shell/shell.component';
 
 export const routes: Routes = [
   {
+    path: '',
+    pathMatch: 'full',
+    loadComponent: () =>
+      import('./features/landing/landing.component').then(
+        (m) => m.LandingComponent
+      ),
+  },
+  {
     path: 'connect',
     canActivate: [connectGuard],
     loadComponent: () =>
@@ -20,7 +28,6 @@ export const routes: Routes = [
     component: ShellComponent,
     canActivate: [sessionGuard],
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
       {
         path: 'dashboard',
         loadComponent: () =>
@@ -34,10 +41,24 @@ export const routes: Routes = [
           import('./features/cars/cars.component').then((m) => m.CarsComponent),
       },
       {
+        path: 'cars/:id',
+        loadComponent: () =>
+          import('./features/cars/car-detail.component').then(
+            (m) => m.CarDetailComponent
+          ),
+      },
+      {
         path: 'drivers',
         loadComponent: () =>
           import('./features/drivers/drivers.component').then(
             (m) => m.DriversComponent
+          ),
+      },
+      {
+        path: 'drivers/:id',
+        loadComponent: () =>
+          import('./features/drivers/driver-detail.component').then(
+            (m) => m.DriverDetailComponent
           ),
       },
       {
@@ -48,10 +69,24 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'tracks/:id',
+        loadComponent: () =>
+          import('./features/tracks/track-detail.component').then(
+            (m) => m.TrackDetailComponent
+          ),
+      },
+      {
         path: 'championships',
         loadComponent: () =>
           import('./features/championships/championships.component').then(
             (m) => m.ChampionshipsComponent
+          ),
+      },
+      {
+        path: 'championships/:id',
+        loadComponent: () =>
+          import('./features/championships/championship-detail.component').then(
+            (m) => m.ChampionshipDetailComponent
           ),
       },
       {
@@ -64,5 +99,5 @@ export const routes: Routes = [
       },
     ],
   },
-  { path: '**', redirectTo: 'dashboard' },
+  { path: '**', redirectTo: '' },
 ];

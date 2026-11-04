@@ -4,6 +4,8 @@ import { SupabaseConfig, UserSession } from '../models/domain.models';
 const STORAGE_KEY = 'heat_championship_session';
 const SESSION_MS = 24 * 60 * 60 * 1000;
 
+type LegacyConfig = { url: string; publishableKey?: string; anonKey?: string };
+
 @Injectable({ providedIn: 'root' })
 export class SessionService {
   private readonly sessionSignal = signal<UserSession | null>(null);
@@ -31,13 +33,22 @@ export class SessionService {
     }
 
     try {
-      const parsed = JSON.parse(raw) as UserSession;
+      const parsed = JSON.parse(raw) as UserSession & {
+        config: LegacyConfig;
+      };
       if (!parsed?.expiresAt || Date.now() > parsed.expiresAt) {
         this.clear();
         return null;
       }
-      this.sessionSignal.set(parsed);
-      return parsed;
+
+      const normalized = this.normalizeSession(parsed);
+      if (!normalized.config.publishableKey) {
+        this.clear();
+        return null;
+      }
+
+      this.persist(normalized);
+      return normalized;
     } catch {
       this.clear();
       return null;
@@ -70,6 +81,22 @@ export class SessionService {
   clear(): void {
     localStorage.removeItem(STORAGE_KEY);
     this.sessionSignal.set(null);
+  }
+
+  private normalizeSession(
+    session: UserSession & { config: LegacyConfig }
+  ): UserSession {
+    const key =
+      session.config.publishableKey?.trim() ||
+      session.config.anonKey?.trim() ||
+      '';
+    return {
+      ...session,
+      config: {
+        url: session.config.url,
+        publishableKey: key,
+      },
+    };
   }
 
   private persist(session: UserSession): void {

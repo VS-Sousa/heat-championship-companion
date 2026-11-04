@@ -1,13 +1,15 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { Car } from '../../core/models/domain.models';
 import { CarsService } from '../../core/services/cars.service';
 import { SessionService } from '../../core/services/session.service';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 
 @Component({
   selector: 'app-cars',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, TranslatePipe, RouterLink],
   templateUrl: './cars.component.html',
   styleUrl: './cars.component.css',
 })
@@ -54,7 +56,11 @@ export class CarsComponent implements OnInit {
   async save(): Promise<void> {
     this.error.set(null);
     try {
-      const payload = { name: this.name.trim(), colorHex: this.colorHex };
+      const payload = {
+        name: this.name.trim(),
+        colorHex: this.colorHex,
+        colorKey: this.colorHex.toLowerCase(),
+      };
       if (!payload.name) throw new Error('Car name is required.');
       if (this.editingId) {
         await this.carsService.update(this.editingId, payload);

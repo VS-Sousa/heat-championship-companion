@@ -17,6 +17,17 @@ export class TracksService {
     return (data ?? []).map((row) => mapTrack(row as Record<string, unknown>));
   }
 
+  async getById(id: string): Promise<Track | null> {
+    const { data, error } = await this.supabase
+      .getClient()
+      .from('tracks')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return data ? mapTrack(data as Record<string, unknown>) : null;
+  }
+
   async create(input: Omit<Track, 'id'>): Promise<Track> {
     const { data, error } = await this.supabase
       .getClient()

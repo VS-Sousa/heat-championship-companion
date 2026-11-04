@@ -1,6 +1,6 @@
 <div class="mb-8">
-  <p class="heat-subtitle">Garage</p>
-  <h1 class="heat-title">Cars</h1>
+  <p class="heat-subtitle">{{ 'cars.eyebrow' | t }}</p>
+  <h1 class="heat-title">{{ 'cars.title' | t }}</h1>
 </div>
 
 @if (error()) {
@@ -10,27 +10,42 @@
 <div class="grid gap-6 lg:grid-cols-5">
   <section class="heat-panel p-5 lg:col-span-3">
     @if (loading()) {
-      <p class="text-heat-chrome">Loading…</p>
+      <p class="text-heat-muted">{{ 'cars.loading' | t }}</p>
     } @else {
       <div class="space-y-3">
         @for (car of cars(); track car.id) {
-          <div class="flex items-center justify-between gap-3 border-b border-white/5 pb-3">
+          <div class="flex items-center justify-between gap-3 border-b border-heat-border pb-3">
             <div class="flex items-center gap-3">
-              <span class="h-4 w-4 rounded-full" [style.backgroundColor]="car.colorHex"></span>
+              <span
+                class="h-4 w-4 rounded-full border border-heat-border"
+                [style.backgroundColor]="car.colorHex"
+              ></span>
               <div>
-                <p class="font-display text-xl tracking-wider">{{ car.name }}</p>
-                <p class="font-mono text-xs text-heat-chrome">{{ car.colorHex }}</p>
+                <a
+                  [routerLink]="['/cars', car.id]"
+                  class="font-display text-xl tracking-wider hover:text-heat-yellow"
+                >
+                  {{ car.name }}
+                </a>
               </div>
             </div>
             @if (session.isHost()) {
               <div class="flex gap-2">
-                <button type="button" class="heat-btn-ghost text-sm" (click)="startEdit(car)">Edit</button>
-                <button type="button" class="heat-btn-ghost text-sm text-heat-red" (click)="remove(car)">Delete</button>
+                <button type="button" class="heat-btn-ghost text-sm" (click)="startEdit(car)">
+                  {{ 'cars.editBtn' | t }}
+                </button>
+                <button
+                  type="button"
+                  class="heat-btn-ghost text-sm text-heat-red"
+                  (click)="remove(car)"
+                >
+                  {{ 'cars.deleteBtn' | t }}
+                </button>
               </div>
             }
           </div>
         } @empty {
-          <p class="text-heat-chrome">No cars registered.</p>
+          <p class="text-heat-muted">{{ 'cars.empty' | t }}</p>
         }
       </div>
     }
@@ -39,20 +54,34 @@
   @if (session.isHost()) {
     <section class="heat-panel p-5 lg:col-span-2">
       <h2 class="mb-4 font-display text-2xl tracking-wider">
-        {{ editingId ? 'Edit Car' : 'Add Car' }}
+        {{ (editingId ? 'cars.edit' : 'cars.add') | t }}
       </h2>
       <form class="space-y-4" (ngSubmit)="save()">
         <div>
-          <label class="heat-label" for="carName">Name</label>
+          <label class="heat-label" for="carName">{{ 'cars.name' | t }}</label>
           <input id="carName" class="heat-input" name="name" [(ngModel)]="name" />
         </div>
         <div>
-          <label class="heat-label" for="carColor">Color</label>
-          <input id="carColor" class="heat-input h-11" type="color" name="colorHex" [(ngModel)]="colorHex" />
+          <label class="heat-label" for="carColor">{{ 'cars.color' | t }}</label>
+          <input
+            id="carColor"
+            class="heat-input h-11"
+            type="color"
+            name="colorHex"
+            [(ngModel)]="colorHex"
+          />
+          <div class="mt-2 flex items-center gap-2 text-sm text-heat-muted">
+            <span
+              class="h-4 w-4 rounded-full border border-heat-border"
+              [style.backgroundColor]="colorHex"
+            ></span>
+          </div>
         </div>
         <div class="flex gap-2">
-          <button type="submit" class="heat-btn-primary">Save</button>
-          <button type="button" class="heat-btn-secondary" (click)="startCreate()">Clear</button>
+          <button type="submit" class="heat-btn-primary">{{ 'cars.save' | t }}</button>
+          <button type="button" class="heat-btn-secondary" (click)="startCreate()">
+            {{ 'cars.clear' | t }}
+          </button>
         </div>
       </form>
     </section>

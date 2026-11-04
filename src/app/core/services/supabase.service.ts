@@ -1,26 +1,22 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import {
   createClient,
   SupabaseClient,
   User,
 } from '@supabase/supabase-js';
 import { SessionService } from './session.service';
+import { I18nService } from '../i18n/i18n.service';
 import { SupabaseConfig } from '../models/domain.models';
 
 @Injectable({ providedIn: 'root' })
 export class SupabaseService {
   private client: SupabaseClient | null = null;
+  private readonly i18n = inject(I18nService);
 
   constructor(private readonly sessionService: SessionService) {
     const session = this.sessionService.restore();
     if (session) {
-      this.client = createClient(session.config.url, session.config.anonKey, {
-        auth: {
-          persistSession: true,
-          storageKey: 'heat_supabase_auth',
-          autoRefreshToken: true,
-        },
-      });
+      this.client = this.create(session.config);
     }
   }
 
@@ -36,24 +32,16 @@ export class SupabaseService {
   }
 
   async connectAsGuest(config: SupabaseConfig): Promise<void> {
-    const probe = createClient(config.url, config.anonKey, {
+    const probe = createClient(config.url, config.publishableKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
     const { error } = await probe.from('cars').select('id').limit(1);
     if (error && this.isHardConnectionError(error.message)) {
-      throw new Error(
-        'Could not reach Supabase. Check URL, anon key, and that the schema was applied.'
-      );
+      throw new Error(this.i18n.t('connect.errorReach'));
     }
 
-    this.client = createClient(config.url, config.anonKey, {
-      auth: {
-        persistSession: true,
-        storageKey: 'heat_supabase_auth',
-        autoRefreshToken: true,
-      },
-    });
+    this.client = this.create(config);
     this.sessionService.saveGuest(config);
   }
 
@@ -62,13 +50,7 @@ export class SupabaseService {
     email: string,
     password: string
   ): Promise<void> {
-    const client = createClient(config.url, config.anonKey, {
-      auth: {
-        persistSession: true,
-        storageKey: 'heat_supabase_auth',
-        autoRefreshToken: true,
-      },
-    });
+    const client = this.create(config);
 
     const { data, error } = await client.auth.signInWithPassword({
       email,
@@ -94,6 +76,16 @@ export class SupabaseService {
     this.client = null;
     this.sessionService.clear();
     localStorage.removeItem('heat_supabase_auth');
+  }
+
+  private create(config: SupabaseConfig): SupabaseClient {
+    return createClient(config.url, config.publishableKey, {
+      auth: {
+        persistSession: true,
+        storageKey: 'heat_supabase_auth',
+        autoRefreshToken: true,
+      },
+    });
   }
 
   private async fetchProfile(

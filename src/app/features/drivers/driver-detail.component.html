@@ -1,0 +1,126 @@
+<a routerLink="/drivers" class="heat-btn-ghost mb-4 text-sm">← {{ 'nav.drivers' | t }}</a>
+
+@if (error()) {
+  <div class="mb-4 rounded-sm border border-heat-red/40 bg-heat-red/10 px-4 py-3">{{ error() }}</div>
+}
+
+@if (loading()) {
+  <p class="text-heat-muted">{{ 'drivers.loading' | t }}</p>
+} @else if (driver()) {
+  <div class="mb-8">
+    <p class="heat-subtitle">
+      #{{ driver()!.number }} · {{ driver()!.abbreviation }}
+    </p>
+    <h1 class="heat-title">{{ formatDriverName(driver()!) }}</h1>
+    @if (best()) {
+      <p class="text-heat-muted">
+        {{ 'detail.bestResult' | t }}: P{{ best()!.position }}
+        @if (best()!.trackName) {
+          · {{ best()!.trackName }}
+        }
+      </p>
+    }
+  </div>
+
+  <div class="grid gap-6 lg:grid-cols-2">
+    <section class="heat-panel p-5">
+      <h2 class="mb-3 font-display text-2xl">{{ 'detail.titles' | t }}</h2>
+      @for (t of titles(); track t.championshipId) {
+        <p class="border-b border-heat-border py-2 text-sm">
+          <a [routerLink]="['/championships', t.championshipId]" class="hover:text-heat-yellow">
+            {{ t.championshipName }} · {{ t.season }}
+          </a>
+          @if (t.carName) {
+            · {{ t.carName }}
+          }
+        </p>
+      } @empty {
+        <p class="text-heat-muted">{{ 'detail.noTitles' | t }}</p>
+      }
+    </section>
+
+    <section class="heat-panel p-5">
+      <h2 class="mb-3 font-display text-2xl">{{ 'detail.duels' | t }}</h2>
+      @for (row of duels(); track row.opponentId) {
+        <div class="flex justify-between border-b border-heat-border py-2 text-sm">
+          <a [routerLink]="['/drivers', row.opponentId]" class="hover:text-heat-yellow">
+            {{ row.opponentName }}
+          </a>
+          <span class="font-mono">{{ row.wins }}-{{ row.losses }}-{{ row.draws }}</span>
+        </div>
+      } @empty {
+        <p class="text-heat-muted">{{ 'detail.noDuels' | t }}</p>
+      }
+    </section>
+
+    <section class="heat-panel p-5">
+      <h2 class="mb-3 font-display text-2xl">{{ 'detail.byCar' | t }}</h2>
+      @for (row of byCar(); track row.id) {
+        <div class="flex justify-between gap-3 border-b border-heat-border py-2 text-sm">
+          <a [routerLink]="['/cars', row.id]" class="hover:text-heat-yellow">{{ row.label }}</a>
+          <span class="shrink-0 font-mono text-heat-muted">
+            {{ row.points }}pts · {{ row.races }}R · {{ row.podiums }}P · {{ row.wins }}W
+          </span>
+        </div>
+      } @empty {
+        <p class="text-heat-muted">—</p>
+      }
+    </section>
+
+    <section class="heat-panel p-5">
+      <h2 class="mb-3 font-display text-2xl">{{ 'detail.byTrack' | t }}</h2>
+      @for (row of byTrack(); track row.id) {
+        <div class="flex justify-between gap-3 border-b border-heat-border py-2 text-sm">
+          <a [routerLink]="['/tracks', row.id]" class="hover:text-heat-yellow">{{ row.label }}</a>
+          <span class="shrink-0 font-mono text-heat-muted">
+            {{ row.points }}pts · {{ row.races }}R · {{ row.podiums }}P · {{ row.wins }}W
+          </span>
+        </div>
+      } @empty {
+        <p class="text-heat-muted">—</p>
+      }
+    </section>
+
+    <section class="heat-panel p-5 lg:col-span-2">
+      <h2 class="mb-3 font-display text-2xl">{{ 'detail.resultHistory' | t }}</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[520px] text-left text-sm">
+          <thead class="text-xs uppercase tracking-widest text-heat-yellow">
+            <tr>
+              <th class="py-2">{{ 'logRace.racedAt' | t }}</th>
+              <th class="py-2">{{ 'logRace.track' | t }}</th>
+              <th class="py-2">{{ 'logRace.car' | t }}</th>
+              <th class="py-2">{{ 'logRace.grid' | t }}</th>
+              <th class="py-2">{{ 'logRace.finish' | t }}</th>
+              <th class="py-2">{{ 'logRace.pts' | t }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of history(); track row.raceId + row.driverId) {
+              <tr class="border-b border-heat-border">
+                <td class="py-2">{{ row.racedAt || '—' }}</td>
+                <td class="py-2">
+                  @if (row.trackId) {
+                    <a [routerLink]="['/tracks', row.trackId]" class="hover:text-heat-yellow">
+                      {{ row.trackName }}
+                    </a>
+                  } @else {
+                    —
+                  }
+                </td>
+                <td class="py-2">
+                  <a [routerLink]="['/cars', row.carId]" class="hover:text-heat-yellow">
+                    {{ row.carName }}
+                  </a>
+                </td>
+                <td class="py-2 font-mono">{{ row.gridPosition }}</td>
+                <td class="py-2 font-mono">{{ row.dnf ? 'DNF' : row.position }}</td>
+                <td class="py-2 font-mono">{{ row.pointsAwarded }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+}

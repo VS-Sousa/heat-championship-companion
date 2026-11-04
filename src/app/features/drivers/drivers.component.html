@@ -1,6 +1,6 @@
 <div class="mb-8">
-  <p class="heat-subtitle">Grid</p>
-  <h1 class="heat-title">Drivers</h1>
+  <p class="heat-subtitle">{{ 'drivers.eyebrow' | t }}</p>
+  <h1 class="heat-title">{{ 'drivers.title' | t }}</h1>
 </div>
 
 @if (error()) {
@@ -9,34 +9,55 @@
 
 <div class="grid gap-6 lg:grid-cols-5">
   <section class="heat-panel p-5 lg:col-span-3">
+    <div class="mb-4">
+      <app-driver-kind-filter
+        [value]="listFilter()"
+        (valueChange)="listFilter.set($event)"
+      />
+    </div>
     @if (loading()) {
-      <p class="text-heat-chrome">Loading…</p>
+      <p class="text-heat-muted">{{ 'drivers.loading' | t }}</p>
     } @else {
       <div class="space-y-3">
-        @for (driver of drivers(); track driver.id) {
-          <div class="flex items-center justify-between gap-3 border-b border-white/5 pb-3">
+        @for (driver of filteredDrivers(); track driver.id) {
+          <div class="flex items-center justify-between gap-3 border-b border-heat-border pb-3">
             <div>
-              <p class="font-display text-xl tracking-wider">
-                <span class="font-mono text-heat-yellow">#{{ driver.number | number: '2.0-0' }}</span>
-                {{ driver.name }}
-                <span class="text-sm text-heat-chrome">({{ driver.abbreviation }})</span>
-              </p>
-              <p class="text-xs uppercase tracking-[0.16em] text-heat-chrome">
-                {{ driver.isLegend ? 'Legend / Bot' : 'Human' }}
+              <a
+                [routerLink]="['/drivers', driver.id]"
+                class="font-display text-xl tracking-wider hover:text-heat-yellow"
+              >
+                <span class="font-mono text-heat-yellow"
+                  >#{{ driver.number | number: '2.0-0' }}</span
+                >
+                {{ formatDriverName(driver) }}
+                <span class="text-sm text-heat-muted">({{ driver.abbreviation }})</span>
+              </a>
+              <p class="text-xs uppercase tracking-[0.16em] text-heat-muted">
+                {{ driver.isLegend ? ('drivers.legend' | t) : ('drivers.human' | t) }}
                 @if (driver.isLegend) {
-                  · Fixed car: {{ carName(driver.fixedCarId) }}
+                  · {{ 'drivers.fixedCar' | t }}: {{ carName(driver.fixedCarId) }}
+                } @else if (driver.favoriteCarId) {
+                  · {{ 'drivers.favoriteCar' | t }}: {{ carName(driver.favoriteCarId) }}
                 }
               </p>
             </div>
             @if (session.isHost()) {
               <div class="flex gap-2">
-                <button type="button" class="heat-btn-ghost text-sm" (click)="startEdit(driver)">Edit</button>
-                <button type="button" class="heat-btn-ghost text-sm text-heat-red" (click)="remove(driver)">Delete</button>
+                <button type="button" class="heat-btn-ghost text-sm" (click)="startEdit(driver)">
+                  {{ 'drivers.editBtn' | t }}
+                </button>
+                <button
+                  type="button"
+                  class="heat-btn-ghost text-sm text-heat-red"
+                  (click)="remove(driver)"
+                >
+                  {{ 'drivers.deleteBtn' | t }}
+                </button>
               </div>
             }
           </div>
         } @empty {
-          <p class="text-heat-chrome">No drivers registered.</p>
+          <p class="text-heat-muted">{{ 'drivers.empty' | t }}</p>
         }
       </div>
     }
@@ -45,41 +66,85 @@
   @if (session.isHost()) {
     <section class="heat-panel p-5 lg:col-span-2">
       <h2 class="mb-4 font-display text-2xl tracking-wider">
-        {{ editingId ? 'Edit Driver' : 'Add Driver' }}
+        {{ (editingId ? 'drivers.edit' : 'drivers.add') | t }}
       </h2>
       <form class="space-y-4" (ngSubmit)="save()">
         <div>
-          <label class="heat-label" for="driverName">Name</label>
+          <label class="heat-label" for="driverName">{{ 'drivers.name' | t }}</label>
           <input id="driverName" class="heat-input" name="name" [(ngModel)]="name" />
+        </div>
+        <div>
+          <label class="heat-label" for="nickname">{{ 'drivers.nickname' | t }}</label>
+          <input id="nickname" class="heat-input" name="nickname" [(ngModel)]="nickname" />
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="heat-label" for="abbr">Abbr</label>
-            <input id="abbr" class="heat-input uppercase" name="abbreviation" maxlength="3" [(ngModel)]="abbreviation" />
+            <label class="heat-label" for="abbr">{{ 'drivers.abbr' | t }}</label>
+            <input
+              id="abbr"
+              class="heat-input uppercase"
+              name="abbreviation"
+              maxlength="3"
+              [(ngModel)]="abbreviation"
+            />
           </div>
           <div>
-            <label class="heat-label" for="number">Number</label>
-            <input id="number" class="heat-input" type="number" min="0" max="99" name="number" [(ngModel)]="number" />
+            <label class="heat-label" for="number">{{ 'drivers.number' | t }}</label>
+            <input
+              id="number"
+              class="heat-input"
+              type="number"
+              min="0"
+              max="99"
+              name="number"
+              [(ngModel)]="number"
+            />
           </div>
         </div>
-        <label class="flex items-center gap-2 text-sm uppercase tracking-[0.14em] text-heat-chrome">
+        <label class="flex items-center gap-2 text-sm uppercase tracking-[0.14em] text-heat-muted">
           <input type="checkbox" name="isLegend" [(ngModel)]="isLegend" />
-          Legend / Bot
+          {{ 'drivers.legend' | t }}
         </label>
         @if (isLegend) {
           <div>
-            <label class="heat-label" for="fixedCar">Fixed Car</label>
+            <label class="heat-label" for="fixedCar">{{ 'drivers.fixedCar' | t }}</label>
             <select id="fixedCar" class="heat-input" name="fixedCarId" [(ngModel)]="fixedCarId">
-              <option value="">Select car</option>
+              <option value="">{{ 'drivers.selectCar' | t }}</option>
               @for (car of cars(); track car.id) {
                 <option [value]="car.id">{{ car.name }}</option>
               }
             </select>
           </div>
+        } @else {
+          <div>
+            <label class="heat-label" for="favoriteCar">{{ 'drivers.favoriteCar' | t }}</label>
+            <select
+              id="favoriteCar"
+              class="heat-input"
+              name="favoriteCarId"
+              [(ngModel)]="favoriteCarId"
+            >
+              <option value="">{{ 'drivers.selectCar' | t }}</option>
+              @for (car of cars(); track car.id) {
+                <option [value]="car.id">{{ car.name }}</option>
+              }
+            </select>
+            <p class="mt-1 text-[11px] text-heat-muted">{{ 'drivers.favoriteHint' | t }}</p>
+            @if (favoriteCarId) {
+              <div class="mt-2 flex items-center gap-2">
+                <span
+                  class="h-4 w-4 rounded-full border border-heat-border"
+                  [style.backgroundColor]="carColor(favoriteCarId)"
+                ></span>
+              </div>
+            }
+          </div>
         }
         <div class="flex gap-2">
-          <button type="submit" class="heat-btn-primary">Save</button>
-          <button type="button" class="heat-btn-secondary" (click)="startCreate()">Clear</button>
+          <button type="submit" class="heat-btn-primary">{{ 'drivers.save' | t }}</button>
+          <button type="button" class="heat-btn-secondary" (click)="startCreate()">
+            {{ 'drivers.clear' | t }}
+          </button>
         </div>
       </form>
     </section>
