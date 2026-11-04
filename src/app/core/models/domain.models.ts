@@ -163,6 +163,7 @@ export interface DriverStatRow {
   races: number;
   wins: number;
   podiums: number;
+  points: number;
   dnfs: number;
   avgFinish: number | null;
 }
@@ -250,6 +251,7 @@ export interface BreakdownStatRow {
   podiums: number;
   points: number;
   avgFinish: number | null;
+  bestFinish: number | null;
 }
 
 export interface TrackDriverHistoryRow {

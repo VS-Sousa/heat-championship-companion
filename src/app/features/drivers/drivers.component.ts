@@ -35,6 +35,7 @@ export class DriversComponent implements OnInit {
   readonly cars = signal<Car[]>([]);
   readonly error = signal<string | null>(null);
   readonly loading = signal(true);
+  readonly formOpen = signal(false);
   readonly listFilter = signal<DriverKindFilter>('human');
 
   readonly filteredDrivers = computed(() => {
@@ -89,7 +90,7 @@ export class DriversComponent implements OnInit {
     return this.cars().find((c) => c.id === id)?.colorHex ?? 'transparent';
   }
 
-  startCreate(): void {
+  resetForm(): void {
     this.editingId = null;
     this.name = '';
     this.nickname = '';
@@ -98,6 +99,11 @@ export class DriversComponent implements OnInit {
     this.isLegend = false;
     this.fixedCarId = '';
     this.favoriteCarId = '';
+  }
+
+  startCreate(): void {
+    this.resetForm();
+    this.formOpen.set(true);
   }
 
   startEdit(driver: Driver): void {
@@ -109,6 +115,12 @@ export class DriversComponent implements OnInit {
     this.isLegend = driver.isLegend;
     this.fixedCarId = driver.fixedCarId ?? '';
     this.favoriteCarId = driver.favoriteCarId ?? '';
+    this.formOpen.set(true);
+  }
+
+  closeForm(): void {
+    this.formOpen.set(false);
+    this.resetForm();
   }
 
   async save(): Promise<void> {
@@ -146,7 +158,7 @@ export class DriversComponent implements OnInit {
       } else {
         await this.driversService.create(payload);
       }
-      this.startCreate();
+      this.closeForm();
       await this.reload();
     } catch (err) {
       this.error.set(err instanceof Error ? err.message : 'Save failed.');

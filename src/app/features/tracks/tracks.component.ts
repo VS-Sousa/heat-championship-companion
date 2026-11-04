@@ -20,6 +20,7 @@ export class TracksComponent implements OnInit {
   readonly tracks = signal<Track[]>([]);
   readonly error = signal<string | null>(null);
   readonly loading = signal(true);
+  readonly formOpen = signal(false);
 
   editingId: string | null = null;
   name = '';
@@ -43,16 +44,27 @@ export class TracksComponent implements OnInit {
     }
   }
 
-  startCreate(): void {
+  resetForm(): void {
     this.editingId = null;
     this.name = '';
     this.country = '';
+  }
+
+  startCreate(): void {
+    this.resetForm();
+    this.formOpen.set(true);
   }
 
   startEdit(track: Track): void {
     this.editingId = track.id;
     this.name = track.name;
     this.country = track.country;
+    this.formOpen.set(true);
+  }
+
+  closeForm(): void {
+    this.formOpen.set(false);
+    this.resetForm();
   }
 
   async save(): Promise<void> {
@@ -70,7 +82,7 @@ export class TracksComponent implements OnInit {
       } else {
         await this.tracksService.create(payload);
       }
-      this.startCreate();
+      this.closeForm();
       await this.reload();
     } catch (err) {
       this.error.set(err instanceof Error ? err.message : 'Save failed.');

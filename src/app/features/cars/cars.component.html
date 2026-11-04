@@ -1,61 +1,82 @@
-<div class="mb-8">
-  <p class="heat-subtitle">{{ 'cars.eyebrow' | t }}</p>
-  <h1 class="heat-title">{{ 'cars.title' | t }}</h1>
+<div class="mb-8 flex flex-wrap items-end justify-between gap-4">
+  <div>
+    <p class="heat-subtitle">{{ 'cars.eyebrow' | t }}</p>
+    <h1 class="heat-title">{{ 'cars.title' | t }}</h1>
+  </div>
+  @if (session.isHost()) {
+    <button type="button" class="heat-btn-primary" (click)="startCreate()">
+      {{ 'cars.add' | t }}
+    </button>
+  }
 </div>
 
 @if (error()) {
   <div class="mb-4 rounded-sm border border-heat-red/40 bg-heat-red/10 px-4 py-3">{{ error() }}</div>
 }
 
-<div class="grid gap-6 lg:grid-cols-5">
-  <section class="heat-panel p-5 lg:col-span-3">
-    @if (loading()) {
-      <p class="text-heat-muted">{{ 'cars.loading' | t }}</p>
-    } @else {
-      <div class="space-y-3">
-        @for (car of cars(); track car.id) {
-          <div class="flex items-center justify-between gap-3 border-b border-heat-border pb-3">
-            <div class="flex items-center gap-3">
-              <span
-                class="h-4 w-4 rounded-full border border-heat-border"
-                [style.backgroundColor]="car.colorHex"
-              ></span>
-              <div>
-                <a
-                  [routerLink]="['/cars', car.id]"
-                  class="font-display text-xl tracking-wider hover:text-heat-yellow"
-                >
-                  {{ car.name }}
-                </a>
-              </div>
+<section class="heat-panel p-5">
+  @if (loading()) {
+    <p class="text-heat-muted">{{ 'cars.loading' | t }}</p>
+  } @else {
+    <div class="space-y-3">
+      @for (car of cars(); track car.id) {
+        <div class="flex items-center justify-between gap-3 border-b border-heat-border pb-3">
+          <div class="flex items-center gap-3">
+            <span
+              class="h-4 w-4 rounded-full border border-heat-border"
+              [style.backgroundColor]="car.colorHex"
+            ></span>
+            <div>
+              <a
+                [routerLink]="['/cars', car.id]"
+                class="font-display text-xl tracking-wider hover:text-heat-yellow"
+              >
+                {{ car.name }}
+              </a>
             </div>
-            @if (session.isHost()) {
-              <div class="flex gap-2">
-                <button type="button" class="heat-btn-ghost text-sm" (click)="startEdit(car)">
-                  {{ 'cars.editBtn' | t }}
-                </button>
-                <button
-                  type="button"
-                  class="heat-btn-ghost text-sm text-heat-red"
-                  (click)="remove(car)"
-                >
-                  {{ 'cars.deleteBtn' | t }}
-                </button>
-              </div>
-            }
           </div>
-        } @empty {
-          <p class="text-heat-muted">{{ 'cars.empty' | t }}</p>
-        }
-      </div>
-    }
-  </section>
+          @if (session.isHost()) {
+            <div class="flex gap-2">
+              <button type="button" class="heat-btn-ghost text-sm" (click)="startEdit(car)">
+                {{ 'cars.editBtn' | t }}
+              </button>
+              <button
+                type="button"
+                class="heat-btn-ghost text-sm text-heat-red"
+                (click)="remove(car)"
+              >
+                {{ 'cars.deleteBtn' | t }}
+              </button>
+            </div>
+          }
+        </div>
+      } @empty {
+        <p class="text-heat-muted">{{ 'cars.empty' | t }}</p>
+      }
+    </div>
+  }
+</section>
 
-  @if (session.isHost()) {
-    <section class="heat-panel p-5 lg:col-span-2">
-      <h2 class="mb-4 font-display text-2xl tracking-wider">
-        {{ (editingId ? 'cars.edit' : 'cars.add') | t }}
-      </h2>
+@if (formOpen()) {
+  <div
+    class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/55 p-4"
+    role="dialog"
+    aria-modal="true"
+    (click)="closeForm()"
+  >
+    <div
+      class="heat-panel my-8 w-full max-w-lg space-y-4 p-5 shadow-xl"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="flex items-start justify-between gap-3">
+        <h2 class="font-display text-2xl tracking-wider">
+          {{ (editingId ? 'cars.edit' : 'cars.add') | t }}
+        </h2>
+        <button type="button" class="heat-btn-ghost text-sm" (click)="closeForm()">
+          {{ 'common.close' | t }}
+        </button>
+      </div>
+
       <form class="space-y-4" (ngSubmit)="save()">
         <div>
           <label class="heat-label" for="carName">{{ 'cars.name' | t }}</label>
@@ -79,11 +100,11 @@
         </div>
         <div class="flex gap-2">
           <button type="submit" class="heat-btn-primary">{{ 'cars.save' | t }}</button>
-          <button type="button" class="heat-btn-secondary" (click)="startCreate()">
-            {{ 'cars.clear' | t }}
+          <button type="button" class="heat-btn-secondary" (click)="closeForm()">
+            {{ 'common.close' | t }}
           </button>
         </div>
       </form>
-    </section>
-  }
-</div>
+    </div>
+  </div>
+}

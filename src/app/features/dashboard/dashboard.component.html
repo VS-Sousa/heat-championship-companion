@@ -152,7 +152,9 @@
                 {{ d.avgFinish === null ? '—' : (d.avgFinish | number: '1.1-1') }}
               </p>
             </div>
-            <p class="font-mono text-heat-yellow">{{ d.wins }}W</p>
+            <p class="shrink-0 font-mono text-heat-yellow">
+              {{ d.points }}pts · {{ d.podiums }}P · {{ d.wins }}W
+            </p>
           </div>
         } @empty {
           <p class="text-heat-muted">{{ 'dashboard.noDriverStats' | t }}</p>

@@ -20,6 +20,7 @@ export class CarsComponent implements OnInit {
   readonly cars = signal<Car[]>([]);
   readonly error = signal<string | null>(null);
   readonly loading = signal(true);
+  readonly formOpen = signal(false);
 
   editingId: string | null = null;
   name = '';
@@ -41,16 +42,27 @@ export class CarsComponent implements OnInit {
     }
   }
 
-  startCreate(): void {
+  resetForm(): void {
     this.editingId = null;
     this.name = '';
     this.colorHex = '#E1221C';
+  }
+
+  startCreate(): void {
+    this.resetForm();
+    this.formOpen.set(true);
   }
 
   startEdit(car: Car): void {
     this.editingId = car.id;
     this.name = car.name;
     this.colorHex = car.colorHex;
+    this.formOpen.set(true);
+  }
+
+  closeForm(): void {
+    this.formOpen.set(false);
+    this.resetForm();
   }
 
   async save(): Promise<void> {
@@ -67,7 +79,7 @@ export class CarsComponent implements OnInit {
       } else {
         await this.carsService.create(payload);
       }
-      this.startCreate();
+      this.closeForm();
       await this.reload();
     } catch (err) {
       this.error.set(err instanceof Error ? err.message : 'Save failed.');

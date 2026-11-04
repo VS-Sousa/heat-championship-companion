@@ -1,73 +1,94 @@
-<div class="mb-8">
-  <p class="heat-subtitle">{{ 'drivers.eyebrow' | t }}</p>
-  <h1 class="heat-title">{{ 'drivers.title' | t }}</h1>
+<div class="mb-8 flex flex-wrap items-end justify-between gap-4">
+  <div>
+    <p class="heat-subtitle">{{ 'drivers.eyebrow' | t }}</p>
+    <h1 class="heat-title">{{ 'drivers.title' | t }}</h1>
+  </div>
+  @if (session.isHost()) {
+    <button type="button" class="heat-btn-primary" (click)="startCreate()">
+      {{ 'drivers.add' | t }}
+    </button>
+  }
 </div>
 
 @if (error()) {
   <div class="mb-4 rounded-sm border border-heat-red/40 bg-heat-red/10 px-4 py-3">{{ error() }}</div>
 }
 
-<div class="grid gap-6 lg:grid-cols-5">
-  <section class="heat-panel p-5 lg:col-span-3">
-    <div class="mb-4">
-      <app-driver-kind-filter
-        [value]="listFilter()"
-        (valueChange)="listFilter.set($event)"
-      />
-    </div>
-    @if (loading()) {
-      <p class="text-heat-muted">{{ 'drivers.loading' | t }}</p>
-    } @else {
-      <div class="space-y-3">
-        @for (driver of filteredDrivers(); track driver.id) {
-          <div class="flex items-center justify-between gap-3 border-b border-heat-border pb-3">
-            <div>
-              <a
-                [routerLink]="['/drivers', driver.id]"
-                class="font-display text-xl tracking-wider hover:text-heat-yellow"
+<section class="heat-panel p-5">
+  <div class="mb-4">
+    <app-driver-kind-filter
+      [value]="listFilter()"
+      (valueChange)="listFilter.set($event)"
+    />
+  </div>
+  @if (loading()) {
+    <p class="text-heat-muted">{{ 'drivers.loading' | t }}</p>
+  } @else {
+    <div class="space-y-3">
+      @for (driver of filteredDrivers(); track driver.id) {
+        <div class="flex items-center justify-between gap-3 border-b border-heat-border pb-3">
+          <div>
+            <a
+              [routerLink]="['/drivers', driver.id]"
+              class="font-display text-xl tracking-wider hover:text-heat-yellow"
+            >
+              <span class="font-mono text-heat-yellow"
+                >#{{ driver.number | number: '2.0-0' }}</span
               >
-                <span class="font-mono text-heat-yellow"
-                  >#{{ driver.number | number: '2.0-0' }}</span
-                >
-                {{ formatDriverName(driver) }}
-                <span class="text-sm text-heat-muted">({{ driver.abbreviation }})</span>
-              </a>
-              <p class="text-xs uppercase tracking-[0.16em] text-heat-muted">
-                {{ driver.isLegend ? ('drivers.legend' | t) : ('drivers.human' | t) }}
-                @if (driver.isLegend) {
-                  · {{ 'drivers.fixedCar' | t }}: {{ carName(driver.fixedCarId) }}
-                } @else if (driver.favoriteCarId) {
-                  · {{ 'drivers.favoriteCar' | t }}: {{ carName(driver.favoriteCarId) }}
-                }
-              </p>
-            </div>
-            @if (session.isHost()) {
-              <div class="flex gap-2">
-                <button type="button" class="heat-btn-ghost text-sm" (click)="startEdit(driver)">
-                  {{ 'drivers.editBtn' | t }}
-                </button>
-                <button
-                  type="button"
-                  class="heat-btn-ghost text-sm text-heat-red"
-                  (click)="remove(driver)"
-                >
-                  {{ 'drivers.deleteBtn' | t }}
-                </button>
-              </div>
-            }
+              {{ formatDriverName(driver) }}
+              <span class="text-sm text-heat-muted">({{ driver.abbreviation }})</span>
+            </a>
+            <p class="text-xs uppercase tracking-[0.16em] text-heat-muted">
+              {{ driver.isLegend ? ('drivers.legend' | t) : ('drivers.human' | t) }}
+              @if (driver.isLegend) {
+                · {{ 'drivers.fixedCar' | t }}: {{ carName(driver.fixedCarId) }}
+              } @else if (driver.favoriteCarId) {
+                · {{ 'drivers.favoriteCar' | t }}: {{ carName(driver.favoriteCarId) }}
+              }
+            </p>
           </div>
-        } @empty {
-          <p class="text-heat-muted">{{ 'drivers.empty' | t }}</p>
-        }
-      </div>
-    }
-  </section>
+          @if (session.isHost()) {
+            <div class="flex gap-2">
+              <button type="button" class="heat-btn-ghost text-sm" (click)="startEdit(driver)">
+                {{ 'drivers.editBtn' | t }}
+              </button>
+              <button
+                type="button"
+                class="heat-btn-ghost text-sm text-heat-red"
+                (click)="remove(driver)"
+              >
+                {{ 'drivers.deleteBtn' | t }}
+              </button>
+            </div>
+          }
+        </div>
+      } @empty {
+        <p class="text-heat-muted">{{ 'drivers.empty' | t }}</p>
+      }
+    </div>
+  }
+</section>
 
-  @if (session.isHost()) {
-    <section class="heat-panel p-5 lg:col-span-2">
-      <h2 class="mb-4 font-display text-2xl tracking-wider">
-        {{ (editingId ? 'drivers.edit' : 'drivers.add') | t }}
-      </h2>
+@if (formOpen()) {
+  <div
+    class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/55 p-4"
+    role="dialog"
+    aria-modal="true"
+    (click)="closeForm()"
+  >
+    <div
+      class="heat-panel my-8 w-full max-w-lg space-y-4 p-5 shadow-xl"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="flex items-start justify-between gap-3">
+        <h2 class="font-display text-2xl tracking-wider">
+          {{ (editingId ? 'drivers.edit' : 'drivers.add') | t }}
+        </h2>
+        <button type="button" class="heat-btn-ghost text-sm" (click)="closeForm()">
+          {{ 'common.close' | t }}
+        </button>
+      </div>
+
       <form class="space-y-4" (ngSubmit)="save()">
         <div>
           <label class="heat-label" for="driverName">{{ 'drivers.name' | t }}</label>
@@ -142,11 +163,11 @@
         }
         <div class="flex gap-2">
           <button type="submit" class="heat-btn-primary">{{ 'drivers.save' | t }}</button>
-          <button type="button" class="heat-btn-secondary" (click)="startCreate()">
-            {{ 'drivers.clear' | t }}
+          <button type="button" class="heat-btn-secondary" (click)="closeForm()">
+            {{ 'common.close' | t }}
           </button>
         </div>
       </form>
-    </section>
-  }
-</div>
+    </div>
+  </div>
+}

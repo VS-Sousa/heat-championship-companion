@@ -158,11 +158,15 @@ export class RacesService {
           races: owned.length,
           wins: finishes.filter((r) => r.position === 1).length,
           podiums: finishes.filter((r) => r.position <= 3).length,
+          points: owned.reduce((sum, r) => sum + r.pointsAwarded, 0),
           dnfs: owned.filter((r) => r.dnf).length,
           avgFinish,
         };
       })
-      .sort((a, b) => b.wins - a.wins || b.podiums - a.podiums);
+      .sort(
+        (a, b) =>
+          b.points - a.points || b.wins - a.wins || b.podiums - a.podiums
+      );
   }
 
   async getCarStats(): Promise<CarStatRow[]> {
@@ -495,7 +499,10 @@ export class RacesService {
     history: ResultHistoryRow[],
     keyFn: (row: ResultHistoryRow) => { id: string; label: string; colorHex?: string }
   ): BreakdownStatRow[] {
-    const map = new Map<string, BreakdownStatRow & { finishSum: number; finishCount: number }>();
+    const map = new Map<
+      string,
+      BreakdownStatRow & { finishSum: number; finishCount: number }
+    >();
     for (const row of history) {
       const key = keyFn(row);
       const current = map.get(key.id) ?? {
@@ -507,6 +514,7 @@ export class RacesService {
         podiums: 0,
         points: 0,
         avgFinish: null,
+        bestFinish: null,
         finishSum: 0,
         finishCount: 0,
       };
@@ -517,6 +525,10 @@ export class RacesService {
       if (!row.dnf) {
         current.finishSum += row.position;
         current.finishCount += 1;
+        current.bestFinish =
+          current.bestFinish === null
+            ? row.position
+            : Math.min(current.bestFinish, row.position);
       }
       map.set(key.id, current);
     }
