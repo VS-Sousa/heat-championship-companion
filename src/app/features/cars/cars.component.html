@@ -1,10 +1,10 @@
-<div class="mb-8 flex flex-wrap items-end justify-between gap-4">
-  <div>
+<div class="heat-page-header">
+  <div class="min-w-0">
     <p class="heat-subtitle">{{ 'cars.eyebrow' | t }}</p>
     <h1 class="heat-title">{{ 'cars.title' | t }}</h1>
   </div>
   @if (session.isHost()) {
-    <button type="button" class="heat-btn-primary" (click)="startCreate()">
+    <button type="button" class="heat-btn-primary w-full sm:w-auto" (click)="startCreate()">
       {{ 'cars.add' | t }}
     </button>
   }
@@ -14,29 +14,31 @@
   <div class="mb-4 rounded-sm border border-heat-red/40 bg-heat-red/10 px-4 py-3">{{ error() }}</div>
 }
 
-<section class="heat-panel p-5">
+<section class="heat-panel p-4 sm:p-5">
   @if (loading()) {
     <p class="text-heat-muted">{{ 'cars.loading' | t }}</p>
   } @else {
     <div class="space-y-3">
       @for (car of cars(); track car.id) {
-        <div class="flex items-center justify-between gap-3 border-b border-heat-border pb-3">
-          <div class="flex items-center gap-3">
+        <div
+          class="flex flex-col gap-3 border-b border-heat-border pb-3 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div class="flex min-w-0 items-center gap-3">
             <span
-              class="h-4 w-4 rounded-full border border-heat-border"
+              class="h-4 w-4 shrink-0 rounded-full border border-heat-border"
               [style.backgroundColor]="car.colorHex"
             ></span>
-            <div>
+            <div class="min-w-0">
               <a
                 [routerLink]="['/cars', car.id]"
-                class="font-display text-xl tracking-wider hover:text-heat-yellow"
+                class="block truncate font-display text-xl tracking-wider hover:text-heat-yellow"
               >
                 {{ car.name }}
               </a>
             </div>
           </div>
           @if (session.isHost()) {
-            <div class="flex gap-2">
+            <div class="flex shrink-0 gap-2">
               <button type="button" class="heat-btn-ghost text-sm" (click)="startEdit(car)">
                 {{ 'cars.editBtn' | t }}
               </button>

@@ -19,6 +19,10 @@ import { TracksService } from '../../core/services/tracks.service';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { TrackRaffleModalComponent } from '../../shared/components/track-raffle/track-raffle-modal.component';
 import { GridDrawComponent } from '../../shared/components/grid-draw/grid-draw.component';
+import {
+  SearchableSelectComponent,
+  SearchableSelectOption,
+} from '../../shared/components/searchable-select/searchable-select.component';
 import { GridAssignment } from '../../core/services/grid.service';
 import { formatDriverName } from '../../core/utils/driver-display';
 import { I18nService } from '../../core/i18n/i18n.service';
@@ -41,6 +45,7 @@ interface ResultDraft {
     TranslatePipe,
     TrackRaffleModalComponent,
     GridDrawComponent,
+    SearchableSelectComponent,
   ],
   templateUrl: './log-race.component.html',
   styleUrl: './log-race.component.css',
@@ -93,6 +98,39 @@ export class LogRaceComponent implements OnInit {
         .filter(Boolean)
     );
     return this.drivers().filter((d) => ids.has(d.id));
+  });
+
+  readonly championshipOptions = computed(() =>
+    this.championships().map((c) => ({
+      value: c.id,
+      label: `${c.name} · E${c.editionNumber}`,
+    }))
+  );
+
+  readonly plannedRaceOptions = computed(() => {
+    this.i18n.lang();
+    return this.plannedRaces().map((race) => ({
+      value: race.id,
+      label: `${this.i18n.t('championships.round')} ${race.roundNumber}`,
+    }));
+  });
+
+  readonly trackOptions = computed(() =>
+    this.tracks().map((track) => ({
+      value: track.id,
+      label: `${track.name} (${track.country})`,
+    }))
+  );
+
+  readonly weatherOptions = computed((): SearchableSelectOption[] => {
+    this.i18n.lang();
+    return [
+      { value: '', label: '—' },
+      { value: 'clear', label: this.i18n.t('logRace.weatherClear') },
+      { value: 'cloudy', label: this.i18n.t('logRace.weatherCloudy') },
+      { value: 'rain', label: this.i18n.t('logRace.weatherRain') },
+      { value: 'heavy_rain', label: this.i18n.t('logRace.weatherHeavy') },
+    ];
   });
 
   async ngOnInit(): Promise<void> {
@@ -215,6 +253,30 @@ export class LogRaceComponent implements OnInit {
 
   carById(carId: string): Car | undefined {
     return this.cars().find((c) => c.id === carId);
+  }
+
+  driverOptions(rowIndex: number): SearchableSelectOption[] {
+    this.i18n.lang();
+    const row = this.results()[rowIndex];
+    return this.drivers().map((driver) => {
+      const legend = driver.isLegend ? ` ${this.i18n.t('logRace.legend')}` : '';
+      return {
+        value: driver.id,
+        label: `#${driver.number} ${formatDriverName(driver)}${legend}`,
+        disabled:
+          (this.isDriverTaken(driver.id, rowIndex) && row?.driverId !== driver.id) ||
+          (this.isLegendCarBlocked(driver, rowIndex) && row?.driverId !== driver.id),
+      };
+    });
+  }
+
+  carOptions(rowIndex: number): SearchableSelectOption[] {
+    const row = this.results()[rowIndex];
+    return this.cars().map((car) => ({
+      value: car.id,
+      label: car.name,
+      disabled: this.isCarTaken(car.id, rowIndex) && row?.carId !== car.id,
+    }));
   }
 
   isCarTaken(carId: string, rowIndex: number): boolean {

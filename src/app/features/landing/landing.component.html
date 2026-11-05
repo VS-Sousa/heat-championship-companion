@@ -7,18 +7,18 @@
     class="pointer-events-none absolute -right-20 bottom-10 h-96 w-96 rounded-full bg-heat-orange/15 blur-3xl"
   ></div>
 
-  <header class="relative z-10 mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-5">
-    <div class="flex items-center gap-3">
+  <header class="relative z-10 mx-auto flex max-w-6xl items-center justify-between gap-2 px-3 py-4 sm:gap-4 sm:px-4 sm:py-5">
+    <div class="flex min-w-0 items-center gap-2 sm:gap-3">
       <span
-        class="flex h-11 w-11 items-center justify-center rounded-sm bg-heat-red font-display text-2xl text-white"
+        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-heat-red font-display text-xl text-white sm:h-11 sm:w-11 sm:text-2xl"
       >
         H
       </span>
-      <div>
-        <p class="font-display text-3xl leading-none tracking-[0.16em] text-heat-red">
+      <div class="min-w-0">
+        <p class="font-display text-2xl leading-none tracking-[0.14em] text-heat-red sm:text-3xl sm:tracking-[0.16em]">
           {{ 'brand.name' | t }}
         </p>
-        <p class="text-[11px] uppercase tracking-[0.28em] text-heat-yellow">
+        <p class="hidden text-[11px] uppercase tracking-[0.28em] text-heat-yellow sm:block">
           {{ 'brand.tagline' | t }}
         </p>
       </div>
@@ -51,14 +51,17 @@
               {{ 'landing.cta' | t }}
             </a>
           }
-          <a href="#how" class="heat-btn-secondary">
-            {{ 'landing.ctaSecondary' | t }}
+          <a href="#setup" class="heat-btn-secondary">
+            {{ 'landing.ctaSetup' | t }}
+          </a>
+          <a href="#use" class="heat-btn-ghost">
+            {{ 'landing.ctaUse' | t }}
           </a>
         </div>
       </div>
 
       <div class="heat-tape p-6 sm:p-8">
-        <div class="heat-section-bar mb-5">{{ 'brand.subtitle' | t }}</div>
+        <div class="heat-section-bar mb-5">{{ 'landing.featuresTitle' | t }}</div>
         <ul class="space-y-5">
           <li>
             <p class="font-display text-xl tracking-[0.1em] text-heat-ink">
@@ -78,26 +81,107 @@
             </p>
             <p class="text-heat-muted">{{ 'landing.feature3.body' | t }}</p>
           </li>
+          <li>
+            <p class="font-display text-xl tracking-[0.1em] text-heat-ink">
+              {{ 'landing.feature4.title' | t }}
+            </p>
+            <p class="text-heat-muted">{{ 'landing.feature4.body' | t }}</p>
+          </li>
         </ul>
       </div>
     </section>
 
-    <section id="how" class="mt-16 scroll-mt-8">
-      <div class="heat-section-bar mb-6 inline-block min-w-[220px]">
-        {{ 'landing.how.title' | t }}
+    <section id="setup" class="mt-16 scroll-mt-8">
+      <div class="heat-section-bar mb-3 inline-block max-w-full sm:min-w-[220px]">
+        {{ 'landing.setup.title' | t }}
       </div>
-      <ol class="grid gap-4 md:grid-cols-3">
+      <p class="mb-6 max-w-2xl text-heat-muted">{{ 'landing.setup.lead' | t }}</p>
+      <ol class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <li class="heat-panel p-5">
           <p class="mb-2 font-mono text-heat-yellow">01</p>
-          <p class="text-heat-ink">{{ 'landing.how.step1' | t }}</p>
+          <p class="mb-1 font-display text-lg tracking-[0.08em] text-heat-ink">
+            {{ 'landing.setup.step1.title' | t }}
+          </p>
+          <p class="text-sm text-heat-muted">{{ 'landing.setup.step1.body' | t }}</p>
         </li>
         <li class="heat-panel p-5">
           <p class="mb-2 font-mono text-heat-yellow">02</p>
-          <p class="text-heat-ink">{{ 'landing.how.step2' | t }}</p>
+          <p class="mb-1 font-display text-lg tracking-[0.08em] text-heat-ink">
+            {{ 'landing.setup.step2.title' | t }}
+          </p>
+          <p class="text-sm text-heat-muted">{{ 'landing.setup.step2.body' | t }}</p>
         </li>
         <li class="heat-panel p-5">
           <p class="mb-2 font-mono text-heat-yellow">03</p>
-          <p class="text-heat-ink">{{ 'landing.how.step3' | t }}</p>
+          <p class="mb-1 font-display text-lg tracking-[0.08em] text-heat-ink">
+            {{ 'landing.setup.step3.title' | t }}
+          </p>
+          <p class="text-sm text-heat-muted">{{ 'landing.setup.step3.body' | t }}</p>
+        </li>
+        <li class="heat-panel p-5">
+          <p class="mb-2 font-mono text-heat-yellow">04</p>
+          <p class="mb-1 font-display text-lg tracking-[0.08em] text-heat-ink">
+            {{ 'landing.setup.step4.title' | t }}
+          </p>
+          <p class="text-sm text-heat-muted">{{ 'landing.setup.step4.body' | t }}</p>
+        </li>
+        <li class="heat-panel p-5 sm:col-span-2 lg:col-span-2">
+          <p class="mb-2 font-mono text-heat-yellow">05</p>
+          <p class="mb-1 font-display text-lg tracking-[0.08em] text-heat-ink">
+            {{ 'landing.setup.step5.title' | t }}
+          </p>
+          <p class="text-sm text-heat-muted">{{ 'landing.setup.step5.body' | t }}</p>
+        </li>
+      </ol>
+    </section>
+
+    <section id="use" class="mt-16 scroll-mt-8">
+      <div class="heat-section-bar mb-3 inline-block max-w-full sm:min-w-[220px]">
+        {{ 'landing.use.title' | t }}
+      </div>
+      <p class="mb-6 max-w-2xl text-heat-muted">{{ 'landing.use.lead' | t }}</p>
+      <ol class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <li class="heat-panel p-5">
+          <p class="mb-2 font-mono text-heat-yellow">01</p>
+          <p class="mb-1 font-display text-lg tracking-[0.08em] text-heat-ink">
+            {{ 'landing.use.step1.title' | t }}
+          </p>
+          <p class="text-sm text-heat-muted">{{ 'landing.use.step1.body' | t }}</p>
+        </li>
+        <li class="heat-panel p-5">
+          <p class="mb-2 font-mono text-heat-yellow">02</p>
+          <p class="mb-1 font-display text-lg tracking-[0.08em] text-heat-ink">
+            {{ 'landing.use.step2.title' | t }}
+          </p>
+          <p class="text-sm text-heat-muted">{{ 'landing.use.step2.body' | t }}</p>
+        </li>
+        <li class="heat-panel p-5">
+          <p class="mb-2 font-mono text-heat-yellow">03</p>
+          <p class="mb-1 font-display text-lg tracking-[0.08em] text-heat-ink">
+            {{ 'landing.use.step3.title' | t }}
+          </p>
+          <p class="text-sm text-heat-muted">{{ 'landing.use.step3.body' | t }}</p>
+        </li>
+        <li class="heat-panel p-5">
+          <p class="mb-2 font-mono text-heat-yellow">04</p>
+          <p class="mb-1 font-display text-lg tracking-[0.08em] text-heat-ink">
+            {{ 'landing.use.step4.title' | t }}
+          </p>
+          <p class="text-sm text-heat-muted">{{ 'landing.use.step4.body' | t }}</p>
+        </li>
+        <li class="heat-panel p-5">
+          <p class="mb-2 font-mono text-heat-yellow">05</p>
+          <p class="mb-1 font-display text-lg tracking-[0.08em] text-heat-ink">
+            {{ 'landing.use.step5.title' | t }}
+          </p>
+          <p class="text-sm text-heat-muted">{{ 'landing.use.step5.body' | t }}</p>
+        </li>
+        <li class="heat-panel p-5">
+          <p class="mb-2 font-mono text-heat-yellow">06</p>
+          <p class="mb-1 font-display text-lg tracking-[0.08em] text-heat-ink">
+            {{ 'landing.use.step6.title' | t }}
+          </p>
+          <p class="text-sm text-heat-muted">{{ 'landing.use.step6.body' | t }}</p>
         </li>
       </ol>
     </section>

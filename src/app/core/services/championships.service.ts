@@ -1,10 +1,13 @@
 import { Injectable } from '@angular/core';
 import {
   Championship,
+  ChampionshipProgression,
   CreateChampionshipRequest,
   GlobalChampionRow,
   PlannedRoundInput,
+  ProgressionDriverSeries,
   Race,
+  RaceResult,
   SeriesChampionRow,
   StandingRow,
   TitleWin,
@@ -14,6 +17,7 @@ import { SupabaseService } from './supabase.service';
 import { DriversService } from './drivers.service';
 import { CarsService } from './cars.service';
 import { formatDriverName } from '../utils/driver-display';
+import { CAR_COLORS } from '../utils/car-colors';
 
 @Injectable({ providedIn: 'root' })
 export class ChampionshipsService {
@@ -215,6 +219,206 @@ export class ChampionshipsService {
       (r) => r.status === 'planned'
     ).length;
     return this.applyTitleFight(standings, championship.pointSystem, remaining);
+  }
+
+  /**
+   * Cumulative points and per-race finishes after each completed round.
+   * Used by standings chart and calendar finish matrix.
+   */
+  async getProgression(
+    championshipId: string
+  ): Promise<ChampionshipProgression> {
+    const allRaces = await this.listRaces(championshipId);
+    const completed = allRaces
+      .filter((r) => r.status === 'completed')
+      .sort((a, b) => (a.roundNumber ?? 0) - (b.roundNumber ?? 0));
+
+    if (!completed.length) {
+      return { rounds: [], series: [] };
+    }
+
+    const resultsByRace = await this.listResultsByRaceIds(
+      completed.map((r) => r.id)
+    );
+    const [drivers, cars] = await Promise.all([
+      this.driversService.list(),
+      this.carsService.list(),
+    ]);
+    const totals = new Map<
+      string,
+      {
+        points: number;
+        wins: number;
+        name: string;
+        nickname?: string;
+        abbreviation: string;
+        number: number;
+      }
+    >();
+    const carUsage = new Map<string, Map<string, number>>();
+
+    const rounds = completed.map((race) => ({
+      raceId: race.id,
+      roundNumber: race.roundNumber ?? 0,
+      trackId: race.trackId,
+    }));
+
+    const pointsAfter = new Map<string, number[]>();
+    const finishByRound = new Map<string, Array<number | null>>();
+    const dnfByRound = new Map<string, boolean[]>();
+
+    for (let i = 0; i < completed.length; i++) {
+      const race = completed[i];
+      const results = resultsByRace.get(race.id) ?? [];
+      const finishThisRound = new Map<string, { position: number; dnf: boolean }>();
+
+      for (const result of results) {
+        const driver = drivers.find((d) => d.id === result.driverId);
+        if (!driver) continue;
+        const current = totals.get(result.driverId) ?? {
+          points: 0,
+          wins: 0,
+          name: driver.name,
+          nickname: driver.nickname,
+          abbreviation: driver.abbreviation,
+          number: driver.number,
+        };
+        current.points += result.pointsAwarded;
+        if (!result.dnf && result.position === 1) current.wins += 1;
+        totals.set(result.driverId, current);
+        finishThisRound.set(result.driverId, {
+          position: result.position,
+          dnf: result.dnf,
+        });
+
+        const usage = carUsage.get(result.driverId) ?? new Map<string, number>();
+        usage.set(result.carId, (usage.get(result.carId) ?? 0) + 1);
+        carUsage.set(result.driverId, usage);
+
+        if (!pointsAfter.has(result.driverId)) {
+          pointsAfter.set(result.driverId, Array(i).fill(0));
+          finishByRound.set(result.driverId, Array(i).fill(null));
+          dnfByRound.set(result.driverId, Array(i).fill(false));
+        }
+      }
+
+      for (const [driverId] of totals) {
+        const pts = pointsAfter.get(driverId) ?? Array(i).fill(0);
+        const finishes = finishByRound.get(driverId) ?? Array(i).fill(null);
+        const dnfs = dnfByRound.get(driverId) ?? Array(i).fill(false);
+        while (pts.length < i) pts.push(pts[pts.length - 1] ?? 0);
+        while (finishes.length < i) finishes.push(null);
+        while (dnfs.length < i) dnfs.push(false);
+        pts.push(totals.get(driverId)!.points);
+        const finish = finishThisRound.get(driverId);
+        finishes.push(finish?.position ?? null);
+        dnfs.push(finish?.dnf ?? false);
+        pointsAfter.set(driverId, pts);
+        finishByRound.set(driverId, finishes);
+        dnfByRound.set(driverId, dnfs);
+      }
+    }
+
+    const series: ProgressionDriverSeries[] = [...totals.entries()].map(
+      ([driverId, info], index) => ({
+        driverId,
+        driverName: info.name,
+        nickname: info.nickname,
+        abbreviation: info.abbreviation,
+        number: info.number,
+        color: this.resolveMostUsedCarColor(
+          carUsage.get(driverId),
+          cars,
+          index
+        ),
+        pointsAfterRound: this.padNumberSeries(
+          pointsAfter.get(driverId) ?? [],
+          completed.length
+        ),
+        finishPositionByRound: this.padNullableSeries(
+          finishByRound.get(driverId) ?? [],
+          completed.length,
+          null
+        ),
+        dnfByRound: this.padBooleanSeries(
+          dnfByRound.get(driverId) ?? [],
+          completed.length
+        ),
+      })
+    );
+
+    series.sort((a, b) => {
+      const ap = a.pointsAfterRound[a.pointsAfterRound.length - 1] ?? 0;
+      const bp = b.pointsAfterRound[b.pointsAfterRound.length - 1] ?? 0;
+      return bp - ap;
+    });
+
+    return { rounds, series };
+  }
+
+  private resolveMostUsedCarColor(
+    usage: Map<string, number> | undefined,
+    cars: { id: string; colorHex: string }[],
+    fallbackIndex: number
+  ): string {
+    if (usage?.size) {
+      const bestCarId = [...usage.entries()].sort((a, b) => {
+        if (b[1] !== a[1]) return b[1] - a[1];
+        return a[0].localeCompare(b[0]);
+      })[0]?.[0];
+      const car = cars.find((c) => c.id === bestCarId);
+      if (car?.colorHex) return car.colorHex;
+    }
+    return CAR_COLORS[fallbackIndex % CAR_COLORS.length].hex;
+  }
+
+  async listResultsByRaceIds(
+    raceIds: string[]
+  ): Promise<Map<string, RaceResult[]>> {
+    const map = new Map<string, RaceResult[]>();
+    if (!raceIds.length) return map;
+
+    const { data, error } = await this.supabase
+      .getClient()
+      .from('race_results')
+      .select('*')
+      .in('race_id', raceIds);
+    if (error) throw new Error(error.message);
+
+    for (const row of data ?? []) {
+      const result = mapRaceResult(row as Record<string, unknown>);
+      const list = map.get(result.raceId) ?? [];
+      list.push(result);
+      map.set(result.raceId, list);
+    }
+
+    for (const [raceId, list] of map) {
+      map.set(
+        raceId,
+        list.sort((a, b) => a.position - b.position)
+      );
+    }
+    return map;
+  }
+
+  private padNumberSeries(values: number[], length: number): number[] {
+    if (values.length >= length) return values.slice(0, length);
+    const last = values[values.length - 1] ?? 0;
+    return [...values, ...Array(length - values.length).fill(last)];
+  }
+
+  private padNullableSeries(
+    values: Array<number | null>,
+    length: number,
+    fill: number | null = null
+  ): Array<number | null> {
+    if (values.length >= length) return values.slice(0, length);
+    return [...values, ...Array(length - values.length).fill(fill)];
+  }
+
+  private padBooleanSeries(values: boolean[], length: number): boolean[] {
+    if (values.length >= length) return values.slice(0, length);
+    return [...values, ...Array(length - values.length).fill(false)];
   }
 
   async getOverallStandings(): Promise<StandingRow[]> {

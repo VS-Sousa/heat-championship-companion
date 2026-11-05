@@ -153,6 +153,47 @@ export interface StandingRow {
   inTitleFight?: boolean;
 }
 
+/** Cumulative standings after each completed championship round. */
+export interface ProgressionRound {
+  raceId: string;
+  roundNumber: number;
+  trackId?: string;
+}
+
+export interface ProgressionDriverSeries {
+  driverId: string;
+  driverName: string;
+  nickname?: string;
+  abbreviation: string;
+  number: number;
+  /** Most-used car color in this championship (fallback palette if unknown). */
+  color: string;
+  /** Cumulative points after each completed round (same order as rounds). */
+  pointsAfterRound: number[];
+  /** Race finish position per completed round; null if the driver did not take part. */
+  finishPositionByRound: Array<number | null>;
+  /** DNF flag aligned with finishPositionByRound. */
+  dnfByRound: boolean[];
+}
+
+export interface ChampionshipProgression {
+  rounds: ProgressionRound[];
+  series: ProgressionDriverSeries[];
+}
+
+export interface RaceResultDetailRow {
+  driverId: string;
+  driverName: string;
+  nickname?: string;
+  carId: string;
+  carName: string;
+  carColorHex?: string;
+  gridPosition: number;
+  position: number;
+  pointsAwarded: number;
+  dnf: boolean;
+}
+
 export interface DriverStatRow {
   driverId: string;
   driverName: string;

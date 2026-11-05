@@ -9,10 +9,10 @@ export type DriverKindFilter = 'human' | 'legend' | 'all';
   standalone: true,
   imports: [NgClass, TranslatePipe],
   template: `
-    <div class="grid grid-cols-3 gap-2">
+    <div class="grid grid-cols-3 gap-1.5 sm:gap-2">
       <button
         type="button"
-        class="rounded-sm border px-3 py-2 text-sm uppercase tracking-[0.14em]"
+        class="rounded-sm border px-1.5 py-2 text-[11px] uppercase tracking-[0.1em] sm:px-3 sm:text-sm sm:tracking-[0.14em]"
         [ngClass]="
           value === 'human'
             ? 'border-heat-yellow bg-heat-yellow/15 text-heat-yellow'
@@ -24,7 +24,7 @@ export type DriverKindFilter = 'human' | 'legend' | 'all';
       </button>
       <button
         type="button"
-        class="rounded-sm border px-3 py-2 text-sm uppercase tracking-[0.14em]"
+        class="rounded-sm border px-1.5 py-2 text-[11px] uppercase tracking-[0.1em] sm:px-3 sm:text-sm sm:tracking-[0.14em]"
         [ngClass]="
           value === 'legend'
             ? 'border-heat-yellow bg-heat-yellow/15 text-heat-yellow'
@@ -36,7 +36,7 @@ export type DriverKindFilter = 'human' | 'legend' | 'all';
       </button>
       <button
         type="button"
-        class="rounded-sm border px-3 py-2 text-sm uppercase tracking-[0.14em]"
+        class="rounded-sm border px-1.5 py-2 text-[11px] uppercase tracking-[0.1em] sm:px-3 sm:text-sm sm:tracking-[0.14em]"
         [ngClass]="
           value === 'all'
             ? 'border-heat-yellow bg-heat-yellow/15 text-heat-yellow'

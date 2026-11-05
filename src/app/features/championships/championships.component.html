@@ -1,10 +1,10 @@
-<div class="mb-8 flex flex-wrap items-end justify-between gap-4">
-  <div>
+<div class="heat-page-header">
+  <div class="min-w-0">
     <p class="heat-subtitle">{{ 'championships.eyebrow' | t }}</p>
     <h1 class="heat-title">{{ 'championships.title' | t }}</h1>
   </div>
   @if (session.isHost()) {
-    <button type="button" class="heat-btn-primary" (click)="startCreate()">
+    <button type="button" class="heat-btn-primary w-full sm:w-auto" (click)="startCreate()">
       {{ 'championships.add' | t }}
     </button>
   }
@@ -14,18 +14,18 @@
   <div class="mb-4 rounded-sm border border-heat-red/40 bg-heat-red/10 px-4 py-3">{{ error() }}</div>
 }
 
-<section class="heat-panel p-5">
+<section class="heat-panel p-4 sm:p-5">
   @if (loading()) {
     <p class="text-heat-muted">{{ 'championships.loading' | t }}</p>
   } @else {
     <div class="space-y-4">
       @for (c of sortedChampionships(); track c.id) {
-        <article class="rounded-sm border border-heat-border bg-heat-steel/40 p-4">
-          <div class="flex flex-wrap items-start justify-between gap-3">
-            <div>
+        <article class="rounded-sm border border-heat-border bg-heat-steel/40 p-3 sm:p-4">
+          <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+            <div class="min-w-0">
               <a
                 [routerLink]="['/championships', c.id]"
-                class="font-display text-2xl tracking-wider text-heat-ink hover:text-heat-yellow"
+                class="block break-words font-display text-xl tracking-wider text-heat-ink hover:text-heat-yellow sm:text-2xl"
               >
                 {{ c.name }}
               </a>
@@ -78,7 +78,7 @@
       @if (!standings().length) {
         <p class="text-heat-muted">{{ 'championships.noResults' | t }}</p>
       } @else {
-        <div class="overflow-x-auto">
+        <div class="heat-scroll">
           <table class="w-full min-w-[420px] text-left text-sm">
             <thead
               class="border-b border-heat-border text-xs uppercase tracking-[0.16em] text-heat-yellow"
@@ -157,12 +157,12 @@
         @if (!editingId) {
           <div>
             <label class="heat-label" for="succession">{{ 'championships.successionOf' | t }}</label>
-            <select id="succession" class="heat-input" name="successionOfId" [(ngModel)]="successionOfId">
-              <option value="">{{ 'championships.newSeries' | t }}</option>
-              @for (c of championships(); track c.id) {
-                <option [value]="c.id">{{ c.name }} · E{{ c.editionNumber }}</option>
-              }
-            </select>
+            <app-searchable-select
+              inputId="succession"
+              name="successionOfId"
+              [(ngModel)]="successionOfId"
+              [options]="successionOptions()"
+            />
           </div>
 
           <div class="space-y-3">
@@ -177,12 +177,12 @@
                 <p class="mb-2 font-mono text-xs text-heat-yellow">
                   {{ 'championships.round' | t }} {{ round.roundNumber }}
                 </p>
-                <select class="heat-input mb-2" [(ngModel)]="round.trackId" [name]="'track-' + i">
-                  <option value="">{{ 'championships.trackOptional' | t }}</option>
-                  @for (track of tracks(); track track.id) {
-                    <option [value]="track.id">{{ track.name }}</option>
-                  }
-                </select>
+                <app-searchable-select
+                  class="mb-2"
+                  [name]="'track-' + i"
+                  [(ngModel)]="round.trackId"
+                  [options]="trackOptions()"
+                />
                 <div class="flex gap-2">
                   <button type="button" class="heat-btn-secondary text-sm" (click)="openRaffle(i)">
                     {{ 'raffle.drawTrack' | t }}

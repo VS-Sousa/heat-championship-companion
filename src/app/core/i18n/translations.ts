@@ -25,22 +25,62 @@ export const TRANSLATIONS: Record<Lang, Record<string, string>> = {
     'landing.eyebrow': 'Companheiro de liga',
     'landing.headline': 'Organize seu campeonato como nos manuais da pista',
     'landing.lead':
-      'Acompanhe classificação, telemetria de carros, pilotos e resultados — no clima vintage de Heat: Pedal to the Metal.',
+      'Classificação com gráfico, calendário com resultados, garagem e BYOS — no clima vintage de Heat: Pedal to the Metal.',
     'landing.cta': 'Acessar a liga',
-    'landing.ctaSecondary': 'Como funciona',
-    'landing.feature1.title': 'Classificação ao vivo',
+    'landing.ctaSetup': 'Como configurar',
+    'landing.ctaUse': 'Como usar',
+    'landing.featuresTitle': 'O que tem na pista',
+    'landing.feature1.title': 'Classificação & gráfico',
     'landing.feature1.body':
-      'Pontos, vitórias e pódios atualizados a cada corrida registrada pela organização.',
-    'landing.feature2.title': 'Garagem & grid',
+      'Tabela com diff e luta pelo título, ou gráfico de pontos por etapa com a cor do carro mais usado.',
+    'landing.feature2.title': 'Calendário & resultados',
     'landing.feature2.body':
-      'Cadastre carros, pilotos (incluindo Lendas) e circuitos no mesmo espírito do livreto.',
-    'landing.feature3.title': 'Host ou visitante',
+      'Lista ou matriz de chegadas; toque numa etapa concluída para ver piloto, carro, grid e posição.',
+    'landing.feature3.title': 'Garagem & campeonatos',
     'landing.feature3.body':
-      'Visitantes consultam a temporada em modo leitura. O host registra corridas e administra a liga.',
-    'landing.how.title': 'Como começar',
-    'landing.how.step1': 'Abra a tela de acesso e escolha Visitante ou Host.',
-    'landing.how.step2': 'Na tela de acesso, informe a URL e a chave pública da liga.',
-    'landing.how.step3': 'Acompanhe o campeonato ou registre o próximo grid.',
+      'Carros, pilotos (Lendas), pistas, edições em série, sorteio de pista e grid, hall da série.',
+    'landing.feature4.title': 'Host ou visitante · BYOS',
+    'landing.feature4.body':
+      'Você traz o próprio Supabase. Visitantes leem a temporada; o host registra e administra.',
+    'landing.setup.title': 'Como configurar',
+    'landing.setup.lead':
+      'O app não hospeda seus dados: cada liga usa o próprio projeto Supabase (BYOS).',
+    'landing.setup.step1.title': 'Crie o projeto',
+    'landing.setup.step1.body':
+      'Em supabase.com, crie um projeto para a sua liga.',
+    'landing.setup.step2.title': 'Rode o schema',
+    'landing.setup.step2.body':
+      'No SQL Editor, execute supabase/schema.sql (ou as migrations na ordem).',
+    'landing.setup.step3.title': 'Crie o usuário Host',
+    'landing.setup.step3.body':
+      'Em Authentication → Users, crie o e-mail e senha do organizador.',
+    'landing.setup.step4.title': 'Copie URL e chave',
+    'landing.setup.step4.body':
+      'Em Project Settings → API Keys, copie a Project URL e a chave publishable (sb_publishable_…).',
+    'landing.setup.step5.title': 'Conecte no app',
+    'landing.setup.step5.body':
+      'Em Acessar a liga: Visitante usa só URL + chave; Host adiciona e-mail e senha. Sessão vale 24h.',
+    'landing.use.title': 'Como usar',
+    'landing.use.lead':
+      'Workflow recomendado depois que a liga estiver conectada (como Host).',
+    'landing.use.step1.title': 'Cadastre a garagem',
+    'landing.use.step1.body':
+      'Em Carros, registre cada modelo com uma cor única — ela aparece na classificação e nos gráficos.',
+    'landing.use.step2.title': 'Cadastre os pilotos',
+    'landing.use.step2.body':
+      'Em Pilotos, defina nome, abreviação e número. Marque Lendas e, se quiser, o carro fixo ou favorito.',
+    'landing.use.step3.title': 'Cadastre as pistas',
+    'landing.use.step3.body':
+      'Em Pistas, adicione os circuitos que a liga usa (país + nome).',
+    'landing.use.step4.title': 'Crie o campeonato',
+    'landing.use.step4.body':
+      'Em Campeonatos, monte o calendário de etapas, sistema de pontos e módulos. Pode herdar série de uma edição anterior.',
+    'landing.use.step5.title': 'Registre as corridas',
+    'landing.use.step5.body':
+      'Sorteie a pista se ainda não houver, monte o grid e use Registrar Corrida com grid, chegada e DNF.',
+    'landing.use.step6.title': 'Acompanhe a temporada',
+    'landing.use.step6.body':
+      'No detalhe do campeonato: tabela/gráfico de pontos, calendário em lista ou matriz, e finalize quando acabar.',
     'landing.footer': 'Não oficial · Feito para fãs de Heat: Pedal to the Metal',
 
     'connect.eyebrow': 'Acesso à liga',
@@ -181,6 +221,20 @@ export const TRANSLATIONS: Record<Lang, Record<string, string>> = {
     'championships.cancelRace': 'Cancelar etapa',
     'championships.seriesHall': 'Hall da série',
     'championships.noChampionYet': 'Campeão ainda não definido',
+    'championships.statusPlanned': 'Planejada',
+    'championships.statusCompleted': 'Concluída',
+    'championships.statusCancelled': 'Cancelada',
+    'championships.raceResults': 'Resultado da etapa',
+    'championships.viewResults': 'Ver resultado',
+    'championships.tapForResults': 'Toque para ver o resultado',
+    'championships.chartEmpty': 'Sem dados para o gráfico ainda.',
+    'championships.standingsChart': 'Evolução de pontos por etapa',
+    'championships.matrixHint':
+      'Células mostram a posição de chegada na corrida. Toque para ver o resultado.',
+
+    'view.table': 'Tabela',
+    'view.chart': 'Gráfico',
+    'view.list': 'Lista',
 
     'logRace.eyebrow': 'Controle de corrida',
     'logRace.title': 'Registrar corrida',
@@ -235,6 +289,7 @@ export const TRANSLATIONS: Record<Lang, Record<string, string>> = {
     'grid.drawing': 'Sorteando…',
 
     'standings.titleFight': 'Na luta',
+    'standings.gap': 'Diff',
 
     'detail.titles': 'Títulos',
     'detail.noTitles': 'Nenhum título.',
@@ -252,6 +307,9 @@ export const TRANSLATIONS: Record<Lang, Record<string, string>> = {
     'common.details': 'Detalhes',
     'common.remove': 'Remover',
     'common.close': 'Fechar',
+    'common.search': 'Pesquisar…',
+    'common.select': 'Selecionar',
+    'common.noResults': 'Nenhum resultado',
 
     'role.guest': 'visitante',
     'role.host': 'host',
@@ -281,22 +339,62 @@ export const TRANSLATIONS: Record<Lang, Record<string, string>> = {
     'landing.eyebrow': 'League companion',
     'landing.headline': 'Run your championship like the track manuals',
     'landing.lead':
-      'Track standings, car telemetry, drivers and race results — in the vintage Heat: Pedal to the Metal vibe.',
+      'Standings with charts, calendar with results, garage and BYOS — in the vintage Heat: Pedal to the Metal vibe.',
     'landing.cta': 'Access your league',
-    'landing.ctaSecondary': 'How it works',
-    'landing.feature1.title': 'Live standings',
+    'landing.ctaSetup': 'How to set up',
+    'landing.ctaUse': 'How to use',
+    'landing.featuresTitle': 'On the track',
+    'landing.feature1.title': 'Standings & chart',
     'landing.feature1.body':
-      'Points, wins and podiums update every time the host logs a race.',
-    'landing.feature2.title': 'Garage & grid',
+      'Table with gap and title fight, or a points-by-round chart colored by each driver’s most-used car.',
+    'landing.feature2.title': 'Calendar & results',
     'landing.feature2.body':
-      'Register cars, drivers (including Legends) and circuits in the spirit of the rulebooks.',
-    'landing.feature3.title': 'Host or guest',
+      'List or finish-position matrix; tap a completed round to see driver, car, grid and finish.',
+    'landing.feature3.title': 'Garage & championships',
     'landing.feature3.body':
-      'Guests browse the season read-only. Hosts log races and manage the league.',
-    'landing.how.title': 'How to start',
-    'landing.how.step1': 'Open the access screen and choose Guest or Host.',
-    'landing.how.step2': 'On the access screen, enter the league URL and public key.',
-    'landing.how.step3': 'Follow the championship or log the next grid.',
+      'Cars, drivers (Legends), tracks, series editions, track/grid raffle, and series hall of fame.',
+    'landing.feature4.title': 'Host or guest · BYOS',
+    'landing.feature4.body':
+      'Bring your own Supabase. Guests browse read-only; the host logs races and runs the league.',
+    'landing.setup.title': 'How to set up',
+    'landing.setup.lead':
+      'The app does not host your data: each league uses its own Supabase project (BYOS).',
+    'landing.setup.step1.title': 'Create the project',
+    'landing.setup.step1.body':
+      'At supabase.com, create a project for your league.',
+    'landing.setup.step2.title': 'Run the schema',
+    'landing.setup.step2.body':
+      'In the SQL Editor, run supabase/schema.sql (or migrations in order).',
+    'landing.setup.step3.title': 'Create the Host user',
+    'landing.setup.step3.body':
+      'Under Authentication → Users, create the organizer email and password.',
+    'landing.setup.step4.title': 'Copy URL and key',
+    'landing.setup.step4.body':
+      'In Project Settings → API Keys, copy the Project URL and publishable key (sb_publishable_…).',
+    'landing.setup.step5.title': 'Connect in the app',
+    'landing.setup.step5.body':
+      'On Access your league: Guest uses URL + key only; Host also enters email and password. Sessions last 24h.',
+    'landing.use.title': 'How to use',
+    'landing.use.lead':
+      'Recommended workflow after the league is connected (as Host).',
+    'landing.use.step1.title': 'Register the garage',
+    'landing.use.step1.body':
+      'Under Cars, add each model with a unique color — it shows up in standings and charts.',
+    'landing.use.step2.title': 'Register the drivers',
+    'landing.use.step2.body':
+      'Under Drivers, set name, abbreviation and number. Mark Legends and optionally a locked or favorite car.',
+    'landing.use.step3.title': 'Register the tracks',
+    'landing.use.step3.body':
+      'Under Tracks, add the circuits your league uses (country + name).',
+    'landing.use.step4.title': 'Create the championship',
+    'landing.use.step4.body':
+      'Under Championships, build the round calendar, point system and modules. You can continue a previous series edition.',
+    'landing.use.step5.title': 'Log the races',
+    'landing.use.step5.body':
+      'Draw the track if needed, set the grid, then use Log Race with grid, finish and DNF.',
+    'landing.use.step6.title': 'Follow the season',
+    'landing.use.step6.body':
+      'On the championship detail: points table/chart, calendar list or matrix, then finalize when it ends.',
     'landing.footer': 'Unofficial · Built for fans of Heat: Pedal to the Metal',
 
     'connect.eyebrow': 'League access',
@@ -437,6 +535,20 @@ export const TRANSLATIONS: Record<Lang, Record<string, string>> = {
     'championships.cancelRace': 'Cancel race',
     'championships.seriesHall': 'Series hall',
     'championships.noChampionYet': 'Champion not decided yet',
+    'championships.statusPlanned': 'Planned',
+    'championships.statusCompleted': 'Completed',
+    'championships.statusCancelled': 'Cancelled',
+    'championships.raceResults': 'Race results',
+    'championships.viewResults': 'View results',
+    'championships.tapForResults': 'Tap to view results',
+    'championships.chartEmpty': 'No chart data yet.',
+    'championships.standingsChart': 'Points progression by round',
+    'championships.matrixHint':
+      'Cells show race finish position. Tap a cell to view results.',
+
+    'view.table': 'Table',
+    'view.chart': 'Chart',
+    'view.list': 'List',
 
     'logRace.eyebrow': 'Race Control',
     'logRace.title': 'Log Race',
@@ -491,6 +603,7 @@ export const TRANSLATIONS: Record<Lang, Record<string, string>> = {
     'grid.drawing': 'Drawing…',
 
     'standings.titleFight': 'In contention',
+    'standings.gap': 'Gap',
 
     'detail.titles': 'Titles',
     'detail.noTitles': 'No titles.',
@@ -508,6 +621,9 @@ export const TRANSLATIONS: Record<Lang, Record<string, string>> = {
     'common.details': 'Details',
     'common.remove': 'Remove',
     'common.close': 'Close',
+    'common.search': 'Search…',
+    'common.select': 'Select',
+    'common.noResults': 'No results',
 
     'role.guest': 'guest',
     'role.host': 'host',

@@ -19,11 +19,18 @@ import {
   DriverKindFilter,
   DriverKindFilterComponent,
 } from '../../shared/components/driver-kind-filter/driver-kind-filter.component';
+import { SearchableSelectComponent } from '../../shared/components/searchable-select/searchable-select.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [RouterLink, DecimalPipe, TranslatePipe, DriverKindFilterComponent],
+  imports: [
+    RouterLink,
+    DecimalPipe,
+    TranslatePipe,
+    DriverKindFilterComponent,
+    SearchableSelectComponent,
+  ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css',
 })
@@ -47,6 +54,13 @@ export class DashboardComponent implements OnInit {
 
   readonly unfinishedChampionships = computed(() =>
     this.championships().filter((c) => c.isActive && !c.finishedAt)
+  );
+
+  readonly championshipOptions = computed(() =>
+    this.unfinishedChampionships().map((c) => ({
+      value: c.id,
+      label: `${c.name} · E${c.editionNumber}`,
+    }))
   );
 
   readonly filteredHall = computed(() =>

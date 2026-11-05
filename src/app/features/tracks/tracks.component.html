@@ -1,10 +1,10 @@
-<div class="mb-8 flex flex-wrap items-end justify-between gap-4">
-  <div>
+<div class="heat-page-header">
+  <div class="min-w-0">
     <p class="heat-subtitle">{{ 'tracks.eyebrow' | t }}</p>
     <h1 class="heat-title">{{ 'tracks.title' | t }}</h1>
   </div>
   @if (session.isHost()) {
-    <button type="button" class="heat-btn-primary" (click)="startCreate()">
+    <button type="button" class="heat-btn-primary w-full sm:w-auto" (click)="startCreate()">
       {{ 'tracks.add' | t }}
     </button>
   }
@@ -14,27 +14,26 @@
   <div class="mb-4 rounded-sm border border-heat-red/40 bg-heat-red/10 px-4 py-3">{{ error() }}</div>
 }
 
-<section class="heat-panel p-5">
+<section class="heat-panel p-4 sm:p-5">
   @if (loading()) {
     <p class="text-heat-muted">{{ 'tracks.loading' | t }}</p>
   } @else {
     <div class="space-y-3">
       @for (track of tracks(); track track.id) {
         <div
-          class="flex items-center justify-between gap-3 border-b pb-3"
-          style="border-color: var(--heat-border)"
+          class="flex flex-col gap-3 border-b border-heat-border pb-3 sm:flex-row sm:items-center sm:justify-between"
         >
-          <div>
+          <div class="min-w-0">
             <a
               [routerLink]="['/tracks', track.id]"
-              class="font-display text-xl tracking-wider hover:text-heat-yellow"
+              class="block truncate font-display text-xl tracking-wider hover:text-heat-yellow"
             >
               {{ track.name }}
             </a>
             <p class="text-xs uppercase tracking-[0.16em] text-heat-muted">{{ track.country }}</p>
           </div>
           @if (session.isHost()) {
-            <div class="flex gap-2">
+            <div class="flex shrink-0 gap-2">
               <button type="button" class="heat-btn-ghost text-sm" (click)="startEdit(track)">
                 {{ 'tracks.editBtn' | t }}
               </button>

@@ -12,7 +12,9 @@ import { TracksService } from '../../core/services/tracks.service';
 import { SessionService } from '../../core/services/session.service';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { TrackRaffleModalComponent } from '../../shared/components/track-raffle/track-raffle-modal.component';
+import { SearchableSelectComponent } from '../../shared/components/searchable-select/searchable-select.component';
 import { formatDriverName } from '../../core/utils/driver-display';
+import { I18nService } from '../../core/i18n/i18n.service';
 
 const DEFAULT_POINTS = '10,8,6,5,4,3,2,1';
 
@@ -24,13 +26,20 @@ interface CalendarDraft {
 @Component({
   selector: 'app-championships',
   standalone: true,
-  imports: [FormsModule, RouterLink, TranslatePipe, TrackRaffleModalComponent],
+  imports: [
+    FormsModule,
+    RouterLink,
+    TranslatePipe,
+    TrackRaffleModalComponent,
+    SearchableSelectComponent,
+  ],
   templateUrl: './championships.component.html',
   styleUrl: './championships.component.css',
 })
 export class ChampionshipsComponent implements OnInit {
   private readonly championshipsService = inject(ChampionshipsService);
   private readonly tracksService = inject(TracksService);
+  private readonly i18n = inject(I18nService);
   readonly session = inject(SessionService);
 
   readonly championships = signal<Championship[]>([]);
@@ -48,6 +57,28 @@ export class ChampionshipsComponent implements OnInit {
       if (aFinished !== bFinished) return aFinished ? 1 : -1;
       return 0;
     });
+  });
+
+  readonly successionOptions = computed(() => {
+    this.i18n.lang();
+    return [
+      { value: '', label: this.i18n.t('championships.newSeries') },
+      ...this.championships().map((c) => ({
+        value: c.id,
+        label: `${c.name} · E${c.editionNumber}`,
+      })),
+    ];
+  });
+
+  readonly trackOptions = computed(() => {
+    this.i18n.lang();
+    return [
+      { value: '', label: this.i18n.t('championships.trackOptional') },
+      ...this.tracks().map((track) => ({
+        value: track.id,
+        label: track.name,
+      })),
+    ];
   });
 
   editingId: string | null = null;

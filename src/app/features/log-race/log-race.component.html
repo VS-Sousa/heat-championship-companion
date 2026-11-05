@@ -1,6 +1,6 @@
-<div class="mb-8">
+<div class="mb-6 min-w-0 sm:mb-8">
   <p class="heat-subtitle">{{ 'logRace.eyebrow' | t }}</p>
-  <h1 class="heat-title">{{ 'logRace.title' | t }}</h1>
+  <h1 class="heat-title break-words">{{ 'logRace.title' | t }}</h1>
 </div>
 
 @if (error()) {
@@ -18,7 +18,7 @@
   <p class="text-heat-muted">{{ 'logRace.loading' | t }}</p>
 } @else {
   <form class="space-y-6" (ngSubmit)="submit()">
-    <section class="heat-panel grid gap-4 p-5 md:grid-cols-2">
+    <section class="heat-panel grid gap-4 p-4 sm:p-5 md:grid-cols-2">
       <div>
         <label class="heat-label">{{ 'logRace.mode' | t }}</label>
         <div class="grid grid-cols-2 gap-2">
@@ -52,46 +52,37 @@
       @if (raceType() === 'championship') {
         <div>
           <label class="heat-label" for="championship">{{ 'logRace.championship' | t }}</label>
-          <select
-            id="championship"
-            class="heat-input"
+          <app-searchable-select
+            inputId="championship"
+            name="championshipId"
             [ngModel]="championshipId()"
             (ngModelChange)="onChampionshipChange($event)"
-            name="championshipId"
-          >
-            <option value="">{{ 'logRace.selectChampionship' | t }}</option>
-            @for (c of championships(); track c.id) {
-              <option [value]="c.id">{{ c.name }} · E{{ c.editionNumber }}</option>
-            }
-          </select>
+            [options]="championshipOptions()"
+            [placeholder]="'logRace.selectChampionship' | t"
+          />
         </div>
         <div>
           <label class="heat-label" for="planned">{{ 'logRace.plannedRound' | t }}</label>
-          <select
-            id="planned"
-            class="heat-input"
+          <app-searchable-select
+            inputId="planned"
+            name="plannedRaceId"
             [ngModel]="plannedRaceId()"
             (ngModelChange)="onPlannedRaceChange($event)"
-            name="plannedRaceId"
-          >
-            <option value="">{{ 'logRace.selectPlanned' | t }}</option>
-            @for (race of plannedRaces(); track race.id) {
-              <option [value]="race.id">
-                {{ 'championships.round' | t }} {{ race.roundNumber }}
-              </option>
-            }
-          </select>
+            [options]="plannedRaceOptions()"
+            [placeholder]="'logRace.selectPlanned' | t"
+          />
         </div>
       }
 
       <div>
         <label class="heat-label" for="track">{{ 'logRace.track' | t }}</label>
-        <select id="track" class="heat-input" name="trackId" [(ngModel)]="trackId">
-          <option value="">{{ 'logRace.selectTrack' | t }}</option>
-          @for (track of tracks(); track track.id) {
-            <option [value]="track.id">{{ track.name }} ({{ track.country }})</option>
-          }
-        </select>
+        <app-searchable-select
+          inputId="track"
+          name="trackId"
+          [(ngModel)]="trackId"
+          [options]="trackOptions()"
+          [placeholder]="'logRace.selectTrack' | t"
+        />
         <button
           type="button"
           class="heat-btn-ghost mt-2 text-sm"
@@ -114,18 +105,12 @@
 
       <div>
         <label class="heat-label" for="weather">{{ 'logRace.weather' | t }}</label>
-        <select
-          id="weather"
-          class="heat-input"
+        <app-searchable-select
+          inputId="weather"
           name="weatherCondition"
           [(ngModel)]="weatherCondition"
-        >
-          <option value="">—</option>
-          <option value="clear">{{ 'logRace.weatherClear' | t }}</option>
-          <option value="cloudy">{{ 'logRace.weatherCloudy' | t }}</option>
-          <option value="rain">{{ 'logRace.weatherRain' | t }}</option>
-          <option value="heavy_rain">{{ 'logRace.weatherHeavy' | t }}</option>
-        </select>
+          [options]="weatherOptions()"
+        />
       </div>
 
       <div class="flex items-end">
@@ -150,66 +135,53 @@
       (assigned)="onGridAssigned($event)"
     />
 
-    <section class="heat-panel p-5">
-      <div class="mb-4 flex items-center justify-between gap-3">
-        <h2 class="font-display text-2xl tracking-wider">{{ 'logRace.results' | t }}</h2>
-        <button type="button" class="heat-btn-secondary" (click)="addResultRow()">
+    <section class="heat-panel p-4 sm:p-5">
+      <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 class="font-display text-xl tracking-wider sm:text-2xl">
+          {{ 'logRace.results' | t }}
+        </h2>
+        <button
+          type="button"
+          class="heat-btn-secondary w-full sm:w-auto"
+          (click)="addResultRow()"
+        >
           {{ 'logRace.addDriver' | t }}
         </button>
       </div>
 
       <div class="space-y-4">
         @for (row of results(); track $index; let i = $index) {
-          <div class="grid gap-3 rounded-sm border border-heat-border bg-heat-steel/40 p-3 md:grid-cols-6">
-            <div class="md:col-span-2">
+          <div
+            class="grid grid-cols-2 gap-3 rounded-sm border border-heat-border bg-heat-steel/40 p-3 md:grid-cols-6"
+          >
+            <div class="col-span-2 md:col-span-2">
               <label class="heat-label">{{ 'logRace.driver' | t }}</label>
-              <select
-                class="heat-input"
-                [ngModel]="row.driverId"
+              <app-searchable-select
                 [name]="'driver-' + i"
+                [ngModel]="row.driverId"
                 (ngModelChange)="onDriverChange(i, $event)"
-              >
-                <option value="">{{ 'logRace.select' | t }}</option>
-                @for (driver of drivers(); track driver.id) {
-                  <option
-                    [value]="driver.id"
-                    [disabled]="
-                      (isDriverTaken(driver.id, i) && row.driverId !== driver.id) ||
-                      (isLegendCarBlocked(driver, i) && row.driverId !== driver.id)
-                    "
-                  >
-                    #{{ driver.number }} {{ formatDriverName(driver) }}
-                    {{ driver.isLegend ? ('logRace.legend' | t) : '' }}
-                  </option>
-                }
-              </select>
+                [options]="driverOptions(i)"
+                [placeholder]="'logRace.select' | t"
+              />
             </div>
 
-            <div class="md:col-span-2">
+            <div class="col-span-2 md:col-span-2">
               <label class="heat-label">{{ 'logRace.car' | t }}</label>
-              <div class="flex items-center gap-2">
+              <div class="flex min-w-0 items-center gap-2">
                 <span
                   class="h-4 w-4 shrink-0 rounded-full border border-heat-border"
                   [style.backgroundColor]="carById(row.carId)?.colorHex || 'transparent'"
                   [class.opacity-30]="!row.carId"
                 ></span>
-                <select
-                  class="heat-input"
-                  [ngModel]="row.carId"
+                <app-searchable-select
+                  class="min-w-0 flex-1"
                   [name]="'car-' + i"
+                  [ngModel]="row.carId"
                   [disabled]="row.carLocked"
                   (ngModelChange)="onCarChange(i, $event)"
-                >
-                  <option value="">{{ 'logRace.select' | t }}</option>
-                  @for (car of cars(); track car.id) {
-                    <option
-                      [value]="car.id"
-                      [disabled]="isCarTaken(car.id, i) && row.carId !== car.id"
-                    >
-                      {{ car.name }}
-                    </option>
-                  }
-                </select>
+                  [options]="carOptions(i)"
+                  [placeholder]="'logRace.select' | t"
+                />
               </div>
             </div>
 
@@ -237,7 +209,9 @@
               />
             </div>
 
-            <div class="flex items-end justify-between gap-2 md:col-span-6">
+            <div
+              class="col-span-2 flex flex-wrap items-center justify-between gap-2 md:col-span-6"
+            >
               <label class="flex items-center gap-2 text-sm uppercase tracking-[0.14em] text-heat-muted">
                 <input
                   type="checkbox"
@@ -264,7 +238,7 @@
       </div>
     </section>
 
-    <button type="submit" class="heat-btn-primary" [disabled]="saving()">
+    <button type="submit" class="heat-btn-primary w-full sm:w-auto" [disabled]="saving()">
       {{ saving() ? ('logRace.saving' | t) : ('logRace.submit' | t) }}
     </button>
   </form>

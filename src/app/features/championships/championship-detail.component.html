@@ -1,18 +1,18 @@
 <a routerLink="/championships" class="heat-btn-ghost mb-4 text-sm">← {{ 'nav.championships' | t }}</a>
 
 @if (error()) {
-  <div class="mb-4 rounded-sm border border-heat-red/40 bg-heat-red/10 px-4 py-3">{{ error() }}</div>
+  <div class="mb-4 rounded-sm border border-heat-red/40 bg-heat-red/10 px-4 py-3 text-sm">
+    {{ error() }}
+  </div>
 }
 
 @if (loading()) {
   <p class="text-heat-muted">{{ 'championships.loading' | t }}</p>
 } @else if (championship()) {
-  <div class="mb-8 flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <p class="heat-subtitle">
-        E{{ championship()!.editionNumber }}
-      </p>
-      <h1 class="heat-title">{{ championship()!.name }}</h1>
+  <div class="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+    <div class="min-w-0">
+      <p class="heat-subtitle">E{{ championship()!.editionNumber }}</p>
+      <h1 class="heat-title break-words">{{ championship()!.name }}</h1>
       <p class="text-heat-muted">
         {{
           championship()!.isActive
@@ -22,20 +22,82 @@
       </p>
     </div>
     @if (session.isHost() && championship()!.isActive) {
-      <button type="button" class="heat-btn-primary" (click)="finalize()">
+      <button type="button" class="heat-btn-primary w-full sm:w-auto" (click)="finalize()">
         {{ 'championships.finalize' | t }}
       </button>
     }
   </div>
 
-  <div class="grid gap-6 lg:grid-cols-2">
-    <section class="heat-panel p-5 lg:col-span-2">
-      <h2 class="mb-4 font-display text-2xl tracking-wider">{{ 'championships.standings' | t }}</h2>
+  <div class="grid gap-4 sm:gap-6">
+    <!-- Standings -->
+    <section class="heat-panel p-4 sm:p-5">
+      <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 class="font-display text-xl tracking-wider sm:text-2xl">
+          {{ 'championships.standings' | t }}
+        </h2>
+        <div class="view-toggle" role="tablist" [attr.aria-label]="'championships.standings' | t">
+          <button
+            type="button"
+            role="tab"
+            class="view-toggle__btn"
+            [class.view-toggle__btn--active]="standingsView() === 'table'"
+            [attr.aria-selected]="standingsView() === 'table'"
+            (click)="setStandingsView('table')"
+          >
+            {{ 'view.table' | t }}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="view-toggle__btn"
+            [class.view-toggle__btn--active]="standingsView() === 'chart'"
+            [attr.aria-selected]="standingsView() === 'chart'"
+            (click)="setStandingsView('chart')"
+          >
+            {{ 'view.chart' | t }}
+          </button>
+        </div>
+      </div>
+
       @if (!standings().length) {
         <p class="text-heat-muted">{{ 'championships.noResults' | t }}</p>
-      } @else {
-        <div class="overflow-x-auto">
-          <table class="w-full min-w-[420px] text-left text-sm">
+      } @else if (standingsView() === 'table') {
+        <!-- Mobile cards -->
+        <ul class="space-y-2 sm:hidden">
+          @for (row of standings(); track row.driverId; let i = $index) {
+            <li class="rounded-sm border border-heat-border bg-heat-steel/40 p-3">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="font-mono text-sm text-heat-yellow">#{{ i + 1 }}</p>
+                  <a
+                    [routerLink]="['/drivers', row.driverId]"
+                    class="block truncate font-display text-lg tracking-wider hover:text-heat-yellow"
+                  >
+                    {{ formatDriverName(row) }}
+                  </a>
+                  @if (row.inTitleFight) {
+                    <span class="text-[10px] uppercase tracking-widest text-heat-yellow">
+                      {{ 'standings.titleFight' | t }}
+                    </span>
+                  }
+                </div>
+                <div class="shrink-0 text-right font-mono">
+                  <p class="text-xl text-heat-ink">{{ row.points }}</p>
+                  <p class="text-xs text-heat-muted">{{ pointsGap(row) }}</p>
+                </div>
+              </div>
+              <div class="mt-2 flex flex-wrap gap-3 text-xs uppercase tracking-wider text-heat-muted">
+                <span>{{ 'dashboard.races' | t }} {{ row.races }}</span>
+                <span>{{ 'dashboard.wins' | t }} {{ row.wins }}</span>
+                <span>{{ 'dashboard.podiums' | t }} {{ row.podiums }}</span>
+              </div>
+            </li>
+          }
+        </ul>
+
+        <!-- Desktop / tablet table -->
+        <div class="heat-scroll hidden sm:block">
+          <table class="w-full min-w-[520px] text-left text-sm">
             <thead
               class="border-b border-heat-border text-xs uppercase tracking-[0.16em] text-heat-yellow"
             >
@@ -43,6 +105,7 @@
                 <th class="py-2 pr-2">{{ 'dashboard.pos' | t }}</th>
                 <th class="py-2 pr-2">{{ 'dashboard.driver' | t }}</th>
                 <th class="py-2 pr-2">{{ 'dashboard.pts' | t }}</th>
+                <th class="py-2 pr-2">{{ 'standings.gap' | t }}</th>
                 <th class="py-2 pr-2">{{ 'dashboard.races' | t }}</th>
                 <th class="py-2 pr-2">{{ 'dashboard.wins' | t }}</th>
                 <th class="py-2">{{ 'dashboard.podiums' | t }}</th>
@@ -63,6 +126,7 @@
                     }
                   </td>
                   <td class="py-2 pr-2 font-mono">{{ row.points }}</td>
+                  <td class="py-2 pr-2 font-mono text-heat-muted">{{ pointsGap(row) }}</td>
                   <td class="py-2 pr-2 font-mono">{{ row.races }}</td>
                   <td class="py-2 pr-2 font-mono">{{ row.wins }}</td>
                   <td class="py-2 font-mono">{{ row.podiums }}</td>
@@ -71,67 +135,279 @@
             </tbody>
           </table>
         </div>
+      } @else {
+        @if (chartLayout(); as chart) {
+          <div class="heat-scroll">
+            <svg
+              class="standings-chart mx-auto block min-w-[280px] w-full max-w-3xl"
+              [attr.viewBox]="'0 0 ' + chart.width + ' ' + chart.height"
+              role="img"
+              [attr.aria-label]="'championships.standingsChart' | t"
+            >
+              @for (tick of chart.yTicks; track tick) {
+                <line
+                  class="chart-grid"
+                  [attr.x1]="chart.padL"
+                  [attr.x2]="chart.width - chart.padR"
+                  [attr.y1]="chart.padT + chart.plotH - (tick / chart.maxPoints) * chart.plotH"
+                  [attr.y2]="chart.padT + chart.plotH - (tick / chart.maxPoints) * chart.plotH"
+                />
+                <text
+                  class="chart-label"
+                  [attr.x]="chart.padL - 8"
+                  [attr.y]="chart.padT + chart.plotH - (tick / chart.maxPoints) * chart.plotH + 4"
+                  text-anchor="end"
+                >
+                  {{ tick }}
+                </text>
+              }
+              @for (round of chart.rounds; track round; let i = $index) {
+                <text
+                  class="chart-label"
+                  [attr.x]="
+                    chart.rounds.length === 1
+                      ? chart.padL + chart.plotW / 2
+                      : chart.padL + (i / (chart.rounds.length - 1)) * chart.plotW
+                  "
+                  [attr.y]="chart.height - chart.padB + 18"
+                  text-anchor="middle"
+                >
+                  E{{ round }}
+                </text>
+              }
+              <text
+                class="chart-axis-title"
+                [attr.x]="14"
+                [attr.y]="chart.height / 2"
+                text-anchor="middle"
+                [attr.transform]="'rotate(-90 14 ' + chart.height / 2 + ')'"
+              >
+                {{ 'dashboard.pts' | t }}
+              </text>
+              @for (s of chart.series; track s.driverId) {
+                <path
+                  class="chart-line"
+                  [attr.d]="s.path"
+                  [attr.stroke]="s.color"
+                  fill="none"
+                />
+                @for (p of s.points; track $index) {
+                  <circle
+                    [attr.cx]="p.x"
+                    [attr.cy]="p.y"
+                    r="4"
+                    [attr.fill]="s.color"
+                    class="chart-dot"
+                  />
+                }
+              }
+            </svg>
+            <ul class="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+              @for (s of chart.series; track s.driverId) {
+                <li class="flex items-center gap-2">
+                  <span
+                    class="inline-block h-2.5 w-2.5 rounded-sm"
+                    [style.background]="s.color"
+                  ></span>
+                  <span class="font-mono uppercase tracking-wider">{{ s.abbreviation }}</span>
+                </li>
+              }
+            </ul>
+          </div>
+        } @else {
+          <p class="text-heat-muted">{{ 'championships.chartEmpty' | t }}</p>
+        }
       }
     </section>
 
-    <section class="heat-panel p-5 lg:col-span-2">
-      <h2 class="mb-4 font-display text-2xl tracking-wider">{{ 'championships.calendar' | t }}</h2>
-      <div class="space-y-3">
-        @for (race of races(); track race.id) {
-          <div class="flex flex-wrap items-center justify-between gap-3 rounded-sm border border-heat-border p-3">
-            <div>
-              <p class="font-mono text-heat-yellow">
-                {{ 'championships.round' | t }} {{ race.roundNumber }}
-              </p>
-              <p class="text-sm text-heat-muted">
-                {{ trackName(race.trackId) }}
-                @if (race.racedAt) {
-                  · {{ race.racedAt }}
-                }
-              </p>
-            </div>
-            @if (session.isHost()) {
-              <div class="flex flex-wrap gap-2">
-                @if (race.status === 'planned' && !race.trackId) {
-                  <button
-                    type="button"
-                    class="heat-btn-secondary text-sm"
-                    (click)="raffleRaceId = race.id"
+    <!-- Calendar -->
+    <section class="heat-panel p-4 sm:p-5">
+      <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 class="font-display text-xl tracking-wider sm:text-2xl">
+          {{ 'championships.calendar' | t }}
+        </h2>
+        <div class="view-toggle" role="tablist" [attr.aria-label]="'championships.calendar' | t">
+          <button
+            type="button"
+            role="tab"
+            class="view-toggle__btn"
+            [class.view-toggle__btn--active]="calendarView() === 'list'"
+            [attr.aria-selected]="calendarView() === 'list'"
+            (click)="setCalendarView('list')"
+          >
+            {{ 'view.list' | t }}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="view-toggle__btn"
+            [class.view-toggle__btn--active]="calendarView() === 'table'"
+            [attr.aria-selected]="calendarView() === 'table'"
+            (click)="setCalendarView('table')"
+          >
+            {{ 'view.table' | t }}
+          </button>
+        </div>
+      </div>
+
+      @if (!races().length) {
+        <p class="text-heat-muted">{{ 'championships.noResults' | t }}</p>
+      } @else if (calendarView() === 'list') {
+        <div class="space-y-3">
+          @for (race of races(); track race.id) {
+            <div
+              class="flex flex-col gap-3 rounded-sm border border-heat-border p-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
+              [class.race-row--clickable]="race.status === 'completed'"
+              [attr.role]="race.status === 'completed' ? 'button' : null"
+              [attr.tabindex]="race.status === 'completed' ? 0 : null"
+              (click)="race.status === 'completed' && openRaceResults(race)"
+              (keydown.enter)="race.status === 'completed' && openRaceResults(race)"
+              (keydown.space)="$event.preventDefault(); race.status === 'completed' && openRaceResults(race)"
+            >
+              <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                  <p class="font-mono text-heat-yellow">
+                    {{ 'championships.round' | t }} {{ race.roundNumber }}
+                  </p>
+                  <span
+                    class="rounded-sm px-1.5 py-0.5 text-[10px] uppercase tracking-widest"
+                    [class.status-planned]="race.status === 'planned'"
+                    [class.status-completed]="race.status === 'completed'"
+                    [class.status-cancelled]="race.status === 'cancelled'"
                   >
-                    {{ 'raffle.drawTrack' | t }}
-                  </button>
-                }
-                @if (race.status === 'planned') {
-                  <a
-                    routerLink="/log-race"
-                    class="heat-btn-primary text-sm"
-                  >
-                    {{ 'nav.logRace' | t }}
-                  </a>
-                }
-                @if (race.status === 'completed' || race.status === 'planned') {
-                  <button
-                    type="button"
-                    class="heat-btn-ghost text-sm text-heat-red"
-                    (click)="cancelRace(race)"
-                  >
-                    {{ 'championships.cancelRace' | t }}
-                  </button>
+                    @switch (race.status) {
+                      @case ('planned') {
+                        {{ 'championships.statusPlanned' | t }}
+                      }
+                      @case ('completed') {
+                        {{ 'championships.statusCompleted' | t }}
+                      }
+                      @default {
+                        {{ 'championships.statusCancelled' | t }}
+                      }
+                    }
+                  </span>
+                </div>
+                <p class="text-sm text-heat-muted">
+                  {{ trackName(race.trackId) }}
+                  @if (race.racedAt) {
+                    · {{ race.racedAt }}
+                  }
+                </p>
+                @if (race.status === 'completed') {
+                  <p class="mt-1 text-[11px] uppercase tracking-wider text-heat-yellow/80">
+                    {{ 'championships.tapForResults' | t }}
+                  </p>
                 }
               </div>
-            }
+              @if (session.isHost()) {
+                <div
+                  class="flex flex-wrap gap-2"
+                  (click)="$event.stopPropagation()"
+                  (keydown)="$event.stopPropagation()"
+                >
+                  @if (race.status === 'planned' && !race.trackId) {
+                    <button
+                      type="button"
+                      class="heat-btn-secondary text-sm"
+                      (click)="raffleRaceId = race.id"
+                    >
+                      {{ 'raffle.drawTrack' | t }}
+                    </button>
+                  }
+                  @if (race.status === 'planned') {
+                    <a routerLink="/log-race" class="heat-btn-primary text-sm">
+                      {{ 'nav.logRace' | t }}
+                    </a>
+                  }
+                  @if (race.status === 'completed' || race.status === 'planned') {
+                    <button
+                      type="button"
+                      class="heat-btn-ghost text-sm text-heat-red"
+                      (click)="cancelRace(race)"
+                    >
+                      {{ 'championships.cancelRace' | t }}
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+      } @else {
+        @if (!matrixDrivers().length) {
+          <p class="text-heat-muted">{{ 'championships.noResults' | t }}</p>
+        } @else {
+          <div class="heat-scroll">
+            <table class="matrix-table w-full text-left text-sm">
+              <thead
+                class="border-b border-heat-border text-xs uppercase tracking-[0.12em] text-heat-yellow"
+              >
+                <tr>
+                  <th class="sticky-col py-2 pr-3">{{ 'dashboard.driver' | t }}</th>
+                  @for (race of races(); track race.id) {
+                    <th class="min-w-[4.5rem] px-2 py-2 text-center align-bottom">
+                      <span class="block font-mono text-heat-yellow">E{{ race.roundNumber }}</span>
+                      <span class="mt-0.5 block max-w-[5.5rem] truncate font-body normal-case tracking-normal text-heat-muted">
+                        {{ shortTrackLabel(race) }}
+                      </span>
+                    </th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (driver of matrixDrivers(); track driver.driverId) {
+                  <tr class="border-b border-heat-border">
+                    <td class="sticky-col py-2 pr-3">
+                      <a
+                        [routerLink]="['/drivers', driver.driverId]"
+                        class="inline-flex items-center gap-2 hover:text-heat-yellow"
+                      >
+                        <span
+                          class="inline-block h-2 w-2 shrink-0 rounded-sm"
+                          [style.background]="driver.color"
+                        ></span>
+                        <span class="truncate">{{ formatDriverName(driver) }}</span>
+                      </a>
+                    </td>
+                    @for (race of races(); track race.id) {
+                      <td class="px-2 py-2 text-center font-mono">
+                        @if (race.status === 'completed') {
+                          <button
+                            type="button"
+                            class="matrix-cell"
+                            (click)="openRaceResults(race)"
+                            [attr.title]="'championships.viewResults' | t"
+                          >
+                            {{ finishInRace(driver.driverId, race) }}
+                          </button>
+                        } @else {
+                          <span class="text-heat-muted">—</span>
+                        }
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
           </div>
+          <p class="mt-3 text-xs text-heat-muted">
+            {{ 'championships.matrixHint' | t }}
+          </p>
         }
-      </div>
+      }
     </section>
 
-    <section class="heat-panel p-5 lg:col-span-2">
-      <h2 class="mb-4 font-display text-2xl tracking-wider">{{ 'championships.seriesHall' | t }}</h2>
+    <!-- Series hall -->
+    <section class="heat-panel p-4 sm:p-5">
+      <h2 class="mb-4 font-display text-xl tracking-wider sm:text-2xl">
+        {{ 'championships.seriesHall' | t }}
+      </h2>
       @for (row of hall(); track row.championshipId) {
-        <div class="mb-3 border-b border-heat-border pb-3">
+        <div class="mb-3 border-b border-heat-border pb-3 last:mb-0 last:border-0 last:pb-0">
           <a
             [routerLink]="['/championships', row.championshipId]"
-            class="font-display text-xl tracking-wider hover:text-heat-yellow"
+            class="font-display text-lg tracking-wider hover:text-heat-yellow sm:text-xl"
           >
             {{ row.championshipName }} · E{{ row.editionNumber }}
           </a>
@@ -157,5 +433,120 @@
       (selected)="onTrackRaffled($event)"
       (closed)="closeRaffle()"
     />
+  }
+
+  @if (raceModal(); as modal) {
+    <div
+      class="fixed inset-0 z-50 flex items-end justify-center bg-black/55 p-0 sm:items-center sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      (click)="closeRaceModal()"
+    >
+      <div
+        class="heat-panel max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-sm p-4 shadow-xl sm:rounded-sm sm:p-5"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="mb-4 flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p class="heat-subtitle">
+              {{ 'championships.round' | t }} {{ modal.race.roundNumber }}
+            </p>
+            <h2 class="font-display text-2xl tracking-wider text-heat-ink">
+              {{ 'championships.raceResults' | t }}
+            </h2>
+            <p class="text-sm text-heat-muted">
+              {{ trackName(modal.race.trackId) }}
+              @if (modal.race.racedAt) {
+                · {{ modal.race.racedAt }}
+              }
+            </p>
+          </div>
+          <button type="button" class="heat-btn-ghost shrink-0 text-sm" (click)="closeRaceModal()">
+            {{ 'common.close' | t }}
+          </button>
+        </div>
+
+        @if (modal.loading) {
+          <p class="text-heat-muted">{{ 'championships.loading' | t }}</p>
+        } @else if (!modal.results.length) {
+          <p class="text-heat-muted">{{ 'championships.noResults' | t }}</p>
+        } @else {
+          <!-- Mobile result cards -->
+          <ul class="space-y-2 sm:hidden">
+            @for (row of modal.results; track row.driverId) {
+              <li class="rounded-sm border border-heat-border p-3">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="font-mono text-heat-yellow">P{{ row.position }}</span>
+                  @if (row.dnf) {
+                    <span class="text-xs uppercase text-heat-red">DNF</span>
+                  } @else {
+                    <span class="font-mono text-sm">{{ row.pointsAwarded }} pts</span>
+                  }
+                </div>
+                <p class="font-display text-lg tracking-wider">
+                  {{ formatDriverName(row) }}
+                </p>
+                <p class="flex items-center gap-2 text-sm text-heat-muted">
+                  <span
+                    class="inline-block h-2.5 w-2.5 rounded-sm"
+                    [style.background]="row.carColorHex || '#888'"
+                  ></span>
+                  {{ row.carName }}
+                </p>
+                <p class="mt-1 text-xs uppercase tracking-wider text-heat-muted">
+                  {{ 'logRace.grid' | t }} {{ row.gridPosition }}
+                  · {{ 'logRace.finish' | t }} {{ row.dnf ? 'DNF' : row.position }}
+                </p>
+              </li>
+            }
+          </ul>
+
+          <div class="heat-scroll hidden sm:block">
+            <table class="w-full text-left text-sm">
+              <thead
+                class="border-b border-heat-border text-xs uppercase tracking-[0.16em] text-heat-yellow"
+              >
+                <tr>
+                  <th class="py-2 pr-2">{{ 'logRace.finish' | t }}</th>
+                  <th class="py-2 pr-2">{{ 'logRace.driver' | t }}</th>
+                  <th class="py-2 pr-2">{{ 'logRace.car' | t }}</th>
+                  <th class="py-2 pr-2">{{ 'logRace.grid' | t }}</th>
+                  <th class="py-2">{{ 'logRace.pts' | t }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of modal.results; track row.driverId) {
+                  <tr class="border-b border-heat-border">
+                    <td class="py-2 pr-2 font-mono text-heat-yellow">
+                      {{ row.dnf ? 'DNF' : row.position }}
+                    </td>
+                    <td class="py-2 pr-2">
+                      <a
+                        [routerLink]="['/drivers', row.driverId]"
+                        class="hover:text-heat-yellow"
+                        (click)="closeRaceModal()"
+                      >
+                        {{ formatDriverName(row) }}
+                      </a>
+                    </td>
+                    <td class="py-2 pr-2">
+                      <span class="inline-flex items-center gap-2">
+                        <span
+                          class="inline-block h-2.5 w-2.5 rounded-sm"
+                          [style.background]="row.carColorHex || '#888'"
+                        ></span>
+                        {{ row.carName }}
+                      </span>
+                    </td>
+                    <td class="py-2 pr-2 font-mono">{{ row.gridPosition }}</td>
+                    <td class="py-2 font-mono">{{ row.pointsAwarded }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
   }
 }

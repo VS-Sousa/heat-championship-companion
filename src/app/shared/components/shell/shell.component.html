@@ -1,20 +1,20 @@
-<div class="min-h-screen bg-heat-bg bg-speed-lines">
+<div class="min-h-screen w-full min-w-0 overflow-x-clip bg-heat-bg bg-speed-lines">
   <header
     class="border-b bg-heat-surface/95 backdrop-blur"
     style="border-color: var(--heat-border)"
   >
-    <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-      <a routerLink="/dashboard" class="group flex items-center gap-3">
+    <div class="mx-auto flex max-w-6xl items-center justify-between gap-1.5 px-3 py-3 sm:gap-4 sm:px-4">
+      <a routerLink="/dashboard" class="group flex min-w-0 items-center gap-2 sm:gap-3">
         <span
-          class="flex h-10 w-10 items-center justify-center rounded-sm bg-heat-red font-display text-2xl text-white"
+          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-heat-red font-display text-xl text-white sm:h-10 sm:w-10 sm:text-2xl"
         >
           H
         </span>
-        <div>
-          <p class="font-display text-2xl leading-none tracking-[0.18em] text-heat-red">
+        <div class="min-w-0">
+          <p class="font-display text-xl leading-none tracking-[0.14em] text-heat-red sm:text-2xl sm:tracking-[0.18em]">
             {{ 'brand.name' | t }}
           </p>
-          <p class="text-[11px] uppercase tracking-[0.28em] text-heat-yellow">
+          <p class="hidden text-[11px] uppercase tracking-[0.28em] text-heat-yellow sm:block">
             {{ 'brand.tagline' | t }}
           </p>
         </div>
@@ -80,9 +80,9 @@
         }
       </nav>
 
-      <div class="flex items-center gap-3">
+      <div class="flex shrink-0 items-center gap-1.5 sm:gap-3">
         <app-prefs-bar />
-        <div class="hidden text-right sm:block">
+        <div class="hidden text-right md:block">
           <p class="font-mono text-xs uppercase tracking-widest text-heat-yellow">
             {{ roleLabel() }}
           </p>
@@ -90,7 +90,7 @@
         </div>
         <button
           type="button"
-          class="heat-btn-ghost p-2.5"
+          class="heat-btn-ghost p-2"
           (click)="disconnect()"
           [attr.title]="'nav.disconnect' | t"
           [attr.aria-label]="'nav.disconnect' | t"
@@ -112,7 +112,7 @@
         </button>
         <button
           type="button"
-          class="heat-btn-secondary p-2.5 md:hidden"
+          class="heat-btn-secondary p-2 md:hidden"
           (click)="menuOpen = !menuOpen"
           [attr.aria-expanded]="menuOpen"
           [attr.title]="'nav.menu' | t"
@@ -202,7 +202,7 @@
     </div>
   </header>
 
-  <main class="mx-auto max-w-6xl px-4 py-8">
+  <main class="mx-auto w-full min-w-0 max-w-6xl px-3 py-5 sm:px-4 sm:py-8">
     <router-outlet />
   </main>
 </div>

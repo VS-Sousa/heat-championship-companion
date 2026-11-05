@@ -7,14 +7,14 @@
 @if (loading()) {
   <p class="text-heat-muted">{{ 'cars.loading' | t }}</p>
 } @else if (car()) {
-  <div class="mb-8 flex items-center gap-3">
+  <div class="mb-6 flex min-w-0 items-center gap-3 sm:mb-8">
     <span
-      class="h-6 w-6 rounded-full"
+      class="h-6 w-6 shrink-0 rounded-full"
       [style.backgroundColor]="car()!.colorHex"
     ></span>
-    <div>
+    <div class="min-w-0">
       <p class="heat-subtitle">{{ 'cars.color' | t }}</p>
-      <h1 class="heat-title">{{ car()!.name }}</h1>
+      <h1 class="heat-title break-words">{{ car()!.name }}</h1>
     </div>
   </div>
 
@@ -63,7 +63,7 @@
 
     <section class="heat-panel p-5 lg:col-span-2">
       <h2 class="mb-3 font-display text-2xl">{{ 'detail.resultHistory' | t }}</h2>
-      <div class="overflow-x-auto">
+      <div class="heat-scroll">
         <table class="w-full min-w-[480px] text-left text-sm">
           <thead class="text-xs uppercase tracking-widest text-heat-yellow">
             <tr>

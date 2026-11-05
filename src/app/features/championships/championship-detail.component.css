@@ -1,0 +1,142 @@
+.view-toggle {
+  display: inline-flex;
+  width: 100%;
+  border: 1px solid rgb(var(--heat-border) / var(--heat-border-a));
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+@media (min-width: 640px) {
+  .view-toggle {
+    width: auto;
+  }
+}
+
+.view-toggle__btn {
+  flex: 1;
+  padding: 0.4rem 0.85rem;
+  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-size: 1rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(var(--heat-muted));
+  background: transparent;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+@media (min-width: 640px) {
+  .view-toggle__btn {
+    flex: none;
+  }
+}
+
+.view-toggle__btn--active {
+  color: rgb(var(--heat-ink));
+  background: rgb(var(--heat-yellow) / 0.18);
+}
+
+.view-toggle__btn:hover:not(.view-toggle__btn--active) {
+  color: rgb(var(--heat-ink));
+  background: rgb(var(--heat-yellow) / 0.08);
+}
+
+.race-row--clickable {
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.race-row--clickable:hover {
+  border-color: rgb(var(--heat-yellow) / 0.55);
+  background: rgb(var(--heat-yellow) / 0.05);
+}
+
+.race-row--clickable:focus-visible {
+  outline: 2px solid rgb(var(--heat-yellow));
+  outline-offset: 2px;
+}
+
+.status-planned {
+  background: rgb(var(--heat-navy) / 0.15);
+  color: rgb(var(--heat-navy));
+}
+
+[data-theme='dark'] .status-planned {
+  background: rgb(var(--heat-yellow) / 0.12);
+  color: rgb(var(--heat-yellow));
+}
+
+.status-completed {
+  background: rgb(var(--heat-yellow) / 0.2);
+  color: rgb(var(--heat-yellow));
+}
+
+.status-cancelled {
+  background: rgb(var(--heat-red) / 0.15);
+  color: rgb(var(--heat-red));
+}
+
+.standings-chart {
+  height: auto;
+}
+
+.chart-grid {
+  stroke: rgb(var(--heat-border) / 0.35);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+
+.chart-label {
+  fill: rgb(var(--heat-muted));
+  font-family: 'Share Tech Mono', ui-monospace, monospace;
+  font-size: 11px;
+}
+
+.chart-axis-title {
+  fill: rgb(var(--heat-muted));
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.chart-line {
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chart-dot {
+  stroke: rgb(var(--heat-panel));
+  stroke-width: 1.5;
+}
+
+.matrix-table {
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.matrix-table .sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: rgb(var(--heat-panel));
+  box-shadow: 4px 0 8px rgb(0 0 0 / 0.06);
+}
+
+.matrix-cell {
+  display: inline-flex;
+  min-width: 2rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.15rem 0.35rem;
+  border-radius: 2px;
+  font-family: 'Share Tech Mono', ui-monospace, monospace;
+  color: rgb(var(--heat-ink));
+  transition: background 0.15s ease;
+}
+
+.matrix-cell:hover {
+  background: rgb(var(--heat-yellow) / 0.18);
+  color: rgb(var(--heat-yellow));
+}

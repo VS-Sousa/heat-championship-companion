@@ -12,6 +12,7 @@ import {
   DriverKindFilter,
   DriverKindFilterComponent,
 } from '../../shared/components/driver-kind-filter/driver-kind-filter.component';
+import { SearchableSelectComponent } from '../../shared/components/searchable-select/searchable-select.component';
 
 @Component({
   selector: 'app-drivers',
@@ -22,6 +23,7 @@ import {
     TranslatePipe,
     RouterLink,
     DriverKindFilterComponent,
+    SearchableSelectComponent,
   ],
   templateUrl: './drivers.component.html',
   styleUrl: './drivers.component.css',
@@ -45,6 +47,10 @@ export class DriversComponent implements OnInit {
     if (filter === 'legend') return all.filter((d) => d.isLegend);
     return all;
   });
+
+  readonly carOptions = computed(() =>
+    this.cars().map((car) => ({ value: car.id, label: car.name }))
+  );
 
   editingId: string | null = null;
   name = '';

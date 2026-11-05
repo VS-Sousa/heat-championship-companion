@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
+import { Component, EventEmitter, Input, Output, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Driver, StandingRow } from '../../../core/models/domain.models';
 import {
@@ -7,21 +7,23 @@ import {
   GridService,
 } from '../../../core/services/grid.service';
 import { TranslatePipe } from '../../../core/i18n/translate.pipe';
+import { I18nService } from '../../../core/i18n/i18n.service';
 import { formatDriverName } from '../../../core/utils/driver-display';
-import { inject } from '@angular/core';
+import { SearchableSelectComponent } from '../searchable-select/searchable-select.component';
 
 @Component({
   selector: 'app-grid-draw',
   standalone: true,
-  imports: [FormsModule, TranslatePipe],
+  imports: [FormsModule, TranslatePipe, SearchableSelectComponent],
   template: `
     <div class="space-y-3 rounded-sm border border-heat-border bg-heat-steel/40 p-3">
       <p class="heat-label mb-0">{{ 'grid.title' | t }}</p>
       <div class="grid gap-2 sm:grid-cols-2">
-        <select class="heat-input" [(ngModel)]="engine" name="gridEngine">
-          <option value="random">{{ 'grid.engineRandom' | t }}</option>
-          <option value="reverse_standings">{{ 'grid.engineReverse' | t }}</option>
-        </select>
+        <app-searchable-select
+          name="gridEngine"
+          [(ngModel)]="engine"
+          [options]="engineOptions()"
+        />
         <button
           type="button"
           class="heat-btn-secondary"
@@ -46,6 +48,7 @@ import { inject } from '@angular/core';
 })
 export class GridDrawComponent {
   private readonly gridService = inject(GridService);
+  private readonly i18n = inject(I18nService);
 
   @Input({ required: true }) drivers: Driver[] = [];
   @Input() standings: StandingRow[] = [];
@@ -54,6 +57,17 @@ export class GridDrawComponent {
   engine: GridEngine = 'random';
   readonly spinning = signal(false);
   readonly preview = signal<GridAssignment[]>([]);
+
+  readonly engineOptions = computed(() => {
+    this.i18n.lang();
+    return [
+      { value: 'random', label: this.i18n.t('grid.engineRandom') },
+      {
+        value: 'reverse_standings',
+        label: this.i18n.t('grid.engineReverse'),
+      },
+    ];
+  });
 
   labelFor(driverId: string): string {
     const driver = this.drivers.find((d) => d.id === driverId);

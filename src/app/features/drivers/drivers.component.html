@@ -1,10 +1,10 @@
-<div class="mb-8 flex flex-wrap items-end justify-between gap-4">
-  <div>
+<div class="heat-page-header">
+  <div class="min-w-0">
     <p class="heat-subtitle">{{ 'drivers.eyebrow' | t }}</p>
     <h1 class="heat-title">{{ 'drivers.title' | t }}</h1>
   </div>
   @if (session.isHost()) {
-    <button type="button" class="heat-btn-primary" (click)="startCreate()">
+    <button type="button" class="heat-btn-primary w-full sm:w-auto" (click)="startCreate()">
       {{ 'drivers.add' | t }}
     </button>
   }
@@ -14,7 +14,7 @@
   <div class="mb-4 rounded-sm border border-heat-red/40 bg-heat-red/10 px-4 py-3">{{ error() }}</div>
 }
 
-<section class="heat-panel p-5">
+<section class="heat-panel p-4 sm:p-5">
   <div class="mb-4">
     <app-driver-kind-filter
       [value]="listFilter()"
@@ -26,11 +26,13 @@
   } @else {
     <div class="space-y-3">
       @for (driver of filteredDrivers(); track driver.id) {
-        <div class="flex items-center justify-between gap-3 border-b border-heat-border pb-3">
-          <div>
+        <div
+          class="flex flex-col gap-3 border-b border-heat-border pb-3 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div class="min-w-0">
             <a
               [routerLink]="['/drivers', driver.id]"
-              class="font-display text-xl tracking-wider hover:text-heat-yellow"
+              class="block font-display text-xl tracking-wider hover:text-heat-yellow"
             >
               <span class="font-mono text-heat-yellow"
                 >#{{ driver.number | number: '2.0-0' }}</span
@@ -48,7 +50,7 @@
             </p>
           </div>
           @if (session.isHost()) {
-            <div class="flex gap-2">
+            <div class="flex shrink-0 gap-2">
               <button type="button" class="heat-btn-ghost text-sm" (click)="startEdit(driver)">
                 {{ 'drivers.editBtn' | t }}
               </button>
@@ -129,27 +131,24 @@
         @if (isLegend) {
           <div>
             <label class="heat-label" for="fixedCar">{{ 'drivers.fixedCar' | t }}</label>
-            <select id="fixedCar" class="heat-input" name="fixedCarId" [(ngModel)]="fixedCarId">
-              <option value="">{{ 'drivers.selectCar' | t }}</option>
-              @for (car of cars(); track car.id) {
-                <option [value]="car.id">{{ car.name }}</option>
-              }
-            </select>
+            <app-searchable-select
+              inputId="fixedCar"
+              name="fixedCarId"
+              [(ngModel)]="fixedCarId"
+              [placeholder]="'drivers.selectCar' | t"
+              [options]="carOptions()"
+            />
           </div>
         } @else {
           <div>
             <label class="heat-label" for="favoriteCar">{{ 'drivers.favoriteCar' | t }}</label>
-            <select
-              id="favoriteCar"
-              class="heat-input"
+            <app-searchable-select
+              inputId="favoriteCar"
               name="favoriteCarId"
               [(ngModel)]="favoriteCarId"
-            >
-              <option value="">{{ 'drivers.selectCar' | t }}</option>
-              @for (car of cars(); track car.id) {
-                <option [value]="car.id">{{ car.name }}</option>
-              }
-            </select>
+              [placeholder]="'drivers.selectCar' | t"
+              [options]="carOptions()"
+            />
             <p class="mt-1 text-[11px] text-heat-muted">{{ 'drivers.favoriteHint' | t }}</p>
             @if (favoriteCarId) {
               <div class="mt-2 flex items-center gap-2">

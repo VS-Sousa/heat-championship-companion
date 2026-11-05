@@ -1,10 +1,12 @@
-<div class="mb-8 flex flex-wrap items-end justify-between gap-4">
-  <div>
+<div class="heat-page-header">
+  <div class="min-w-0">
     <p class="heat-subtitle">{{ 'dashboard.eyebrow' | t }}</p>
     <h1 class="heat-title">{{ 'dashboard.title' | t }}</h1>
   </div>
   @if (session.isHost()) {
-    <a routerLink="/log-race" class="heat-btn-primary">{{ 'dashboard.logRace' | t }}</a>
+    <a routerLink="/log-race" class="heat-btn-primary w-full sm:w-auto">{{
+      'dashboard.logRace' | t
+    }}</a>
   }
 </div>
 
@@ -19,22 +21,19 @@
     {{ 'dashboard.loading' | t }}
   </p>
 } @else {
-  <div class="grid gap-6 lg:grid-cols-5">
-    <section class="heat-panel p-5 lg:col-span-3">
-      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 class="font-display text-2xl tracking-[0.14em] text-heat-ink">
+  <div class="grid min-w-0 gap-4 sm:gap-6 lg:grid-cols-5">
+    <section class="heat-panel p-4 sm:p-5 lg:col-span-3">
+      <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <h2 class="font-display text-xl tracking-[0.14em] text-heat-ink sm:text-2xl">
           {{ 'dashboard.standings' | t }}
         </h2>
         @if (unfinishedChampionships().length) {
-          <select
-            class="heat-input max-w-xs"
+          <app-searchable-select
+            class="w-full sm:max-w-xs"
+            [options]="championshipOptions()"
             [value]="selectedChampionshipId() ?? ''"
-            (change)="onChampionshipChange($any($event.target).value)"
-          >
-            @for (c of unfinishedChampionships(); track c.id) {
-              <option [value]="c.id">{{ c.name }} · E{{ c.editionNumber }}</option>
-            }
-          </select>
+            (valueChange)="onChampionshipChange($event)"
+          />
         }
       </div>
 
@@ -43,7 +42,38 @@
       } @else if (!standings().length) {
         <p class="text-heat-muted">{{ 'dashboard.noResults' | t }}</p>
       } @else {
-        <div class="overflow-x-auto">
+        <ul class="space-y-2 sm:hidden">
+          @for (row of standings(); track row.driverId; let i = $index) {
+            <li class="rounded-sm border border-heat-border bg-heat-steel/40 p-3">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="font-mono text-sm text-heat-yellow">#{{ i + 1 }}</p>
+                  <a
+                    [routerLink]="['/drivers', row.driverId]"
+                    class="block truncate font-display text-lg tracking-wider hover:text-heat-yellow"
+                  >
+                    <span class="font-mono text-heat-muted"
+                      >#{{ row.number | number: '2.0-0' }}</span
+                    >
+                    {{ formatDriverName(row) }}
+                  </a>
+                  @if (showTitleFight() && row.inTitleFight) {
+                    <span class="text-[10px] uppercase tracking-widest text-heat-yellow">
+                      {{ 'standings.titleFight' | t }}
+                    </span>
+                  }
+                </div>
+                <p class="shrink-0 font-mono text-xl text-heat-ink">{{ row.points }}</p>
+              </div>
+              <div class="mt-2 flex flex-wrap gap-3 text-xs uppercase tracking-wider text-heat-muted">
+                <span>{{ 'dashboard.wins' | t }} {{ row.wins }}</span>
+                <span>{{ 'dashboard.podiums' | t }} {{ row.podiums }}</span>
+              </div>
+            </li>
+          }
+        </ul>
+
+        <div class="heat-scroll hidden sm:block">
           <table class="w-full min-w-[420px] text-left text-sm">
             <thead
               class="border-b border-heat-border text-xs uppercase tracking-[0.16em] text-heat-yellow"
@@ -89,8 +119,8 @@
       }
     </section>
 
-    <section class="heat-panel p-5 lg:col-span-2">
-      <h2 class="mb-4 font-display text-2xl tracking-[0.14em]">
+    <section class="heat-panel p-4 sm:p-5 lg:col-span-2">
+      <h2 class="mb-4 font-display text-xl tracking-[0.14em] sm:text-2xl">
         {{ 'dashboard.titlesHall' | t }}
       </h2>
       <div class="mb-4">
@@ -102,14 +132,14 @@
       <div class="space-y-3">
         @for (row of filteredHall(); track row.driverId) {
           <div class="flex items-center justify-between gap-3 border-b border-heat-border pb-2">
-            <div>
+            <div class="min-w-0">
               <a
                 [routerLink]="['/drivers', row.driverId]"
-                class="text-heat-ink hover:text-heat-yellow"
+                class="block truncate text-heat-ink hover:text-heat-yellow"
               >
                 {{ row.driverName }}
               </a>
-              <p class="font-mono text-xs text-heat-muted">
+              <p class="truncate font-mono text-xs text-heat-muted">
                 @if (row.lastTitleSeason) {
                   {{ row.lastTitleSeason }}
                   @if (row.lastTitleCarName) {
@@ -118,7 +148,7 @@
                 }
               </p>
             </div>
-            <p class="font-mono text-heat-yellow">{{ row.titles }}×</p>
+            <p class="shrink-0 font-mono text-heat-yellow">{{ row.titles }}×</p>
           </div>
         } @empty {
           <p class="text-heat-muted">{{ 'dashboard.noTitlesYet' | t }}</p>
@@ -126,8 +156,8 @@
       </div>
     </section>
 
-    <section class="heat-panel p-5 lg:col-span-2">
-      <h2 class="mb-4 font-display text-2xl tracking-[0.14em]">
+    <section class="heat-panel p-4 sm:p-5 lg:col-span-2">
+      <h2 class="mb-4 font-display text-xl tracking-[0.14em] sm:text-2xl">
         {{ 'dashboard.driverForm' | t }}
       </h2>
       <div class="mb-4">
@@ -138,11 +168,11 @@
       </div>
       <div class="space-y-3">
         @for (d of filteredDriverStats(); track d.driverId) {
-          <div class="flex items-center justify-between gap-3 border-b border-heat-border pb-2">
-            <div>
+          <div class="flex items-start justify-between gap-3 border-b border-heat-border pb-2">
+            <div class="min-w-0">
               <a
                 [routerLink]="['/drivers', d.driverId]"
-                class="text-heat-ink hover:text-heat-yellow"
+                class="block truncate text-heat-ink hover:text-heat-yellow"
               >
                 {{ d.driverName }}
               </a>
@@ -152,8 +182,9 @@
                 {{ d.avgFinish === null ? '—' : (d.avgFinish | number: '1.1-1') }}
               </p>
             </div>
-            <p class="shrink-0 font-mono text-heat-yellow">
-              {{ d.points }}pts · {{ d.podiums }}P · {{ d.wins }}W
+            <p class="shrink-0 text-right font-mono text-xs text-heat-yellow sm:text-sm">
+              {{ d.points }}pts
+              <span class="block sm:inline"> · {{ d.podiums }}P · {{ d.wins }}W</span>
             </p>
           </div>
         } @empty {
@@ -162,8 +193,8 @@
       </div>
     </section>
 
-    <section class="heat-panel p-5 lg:col-span-3">
-      <h2 class="mb-4 font-display text-2xl tracking-[0.14em]">
+    <section class="heat-panel p-4 sm:p-5 lg:col-span-3">
+      <h2 class="mb-4 font-display text-xl tracking-[0.14em] sm:text-2xl">
         {{ 'dashboard.carPerf' | t }}
       </h2>
       <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -172,12 +203,12 @@
             [routerLink]="['/cars', car.carId]"
             class="rounded-sm border border-heat-border bg-heat-steel/60 p-3 hover:border-heat-yellow/50"
           >
-            <div class="mb-2 flex items-center gap-2">
+            <div class="mb-2 flex min-w-0 items-center gap-2">
               <span
-                class="h-3 w-3 rounded-full"
+                class="h-3 w-3 shrink-0 rounded-full"
                 [style.backgroundColor]="car.colorHex"
               ></span>
-              <p class="font-display text-xl tracking-wider">{{ car.carName }}</p>
+              <p class="truncate font-display text-xl tracking-wider">{{ car.carName }}</p>
             </div>
             <p class="font-mono text-xs uppercase tracking-widest text-heat-muted">
               {{ car.races }} {{ 'dashboard.races' | t }} · {{ car.wins }}W ·
