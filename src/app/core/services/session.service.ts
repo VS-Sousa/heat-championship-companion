@@ -1,5 +1,14 @@
 import { Injectable, signal, computed } from '@angular/core';
-import { SupabaseConfig, UserSession } from '../models/domain.models';
+import {
+  PREVIEW_SESSION_CONFIG,
+  SupabaseConfig,
+  UserSession,
+} from '../models/domain.models';
+import {
+  resolveStorageMode,
+  setStorageModeOverride,
+} from '../data/resolve-storage-mode';
+import { StorageMode } from '../data/storage-mode';
 
 const STORAGE_KEY = 'heat_championship_session';
 const SESSION_MS = 24 * 60 * 60 * 1000;
@@ -20,6 +29,10 @@ export class SessionService {
   readonly username = computed(
     () => this.sessionSignal()?.user?.username ?? 'Guest'
   );
+  readonly storageMode = computed<StorageMode>(() => {
+    return this.sessionSignal()?.storageMode ?? resolveStorageMode();
+  });
+  readonly isPreview = computed(() => this.storageMode() === 'preview');
 
   constructor() {
     this.restore();
@@ -56,7 +69,9 @@ export class SessionService {
   }
 
   saveGuest(config: SupabaseConfig): UserSession {
+    setStorageModeOverride('supabase');
     const session: UserSession = {
+      storageMode: 'supabase',
       config,
       user: null,
       expiresAt: Date.now() + SESSION_MS,
@@ -69,9 +84,30 @@ export class SessionService {
     config: SupabaseConfig,
     user: NonNullable<UserSession['user']>
   ): UserSession {
+    setStorageModeOverride('supabase');
     const session: UserSession = {
+      storageMode: 'supabase',
       config,
       user,
+      expiresAt: Date.now() + SESSION_MS,
+    };
+    this.persist(session);
+    return session;
+  }
+
+  /** Start an offline demo session (host by default for full UI). */
+  savePreview(asHost = true): UserSession {
+    setStorageModeOverride('preview');
+    const session: UserSession = {
+      storageMode: 'preview',
+      config: PREVIEW_SESSION_CONFIG,
+      user: asHost
+        ? {
+            id: 'preview-host',
+            username: 'Demo Host',
+            role: 'host',
+          }
+        : null,
       expiresAt: Date.now() + SESSION_MS,
     };
     this.persist(session);
@@ -90,8 +126,12 @@ export class SessionService {
       session.config.publishableKey?.trim() ||
       session.config.anonKey?.trim() ||
       '';
+    const storageMode: StorageMode =
+      session.storageMode ??
+      (session.config.url?.startsWith('preview://') ? 'preview' : 'supabase');
     return {
       ...session,
+      storageMode,
       config: {
         url: session.config.url,
         publishableKey: key,

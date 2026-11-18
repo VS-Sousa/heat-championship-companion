@@ -7,6 +7,10 @@ import {
 import { SessionService } from './session.service';
 import { I18nService } from '../i18n/i18n.service';
 import { SupabaseConfig } from '../models/domain.models';
+import {
+  resolveStorageMode,
+  setStorageModeOverride,
+} from '../data/resolve-storage-mode';
 
 @Injectable({ providedIn: 'root' })
 export class SupabaseService {
@@ -15,7 +19,8 @@ export class SupabaseService {
 
   constructor(private readonly sessionService: SessionService) {
     const session = this.sessionService.restore();
-    if (session) {
+    const mode = session?.storageMode ?? resolveStorageMode();
+    if (session && mode === 'supabase') {
       this.client = this.create(session.config);
     }
   }
@@ -76,6 +81,7 @@ export class SupabaseService {
     this.client = null;
     this.sessionService.clear();
     localStorage.removeItem('heat_supabase_auth');
+    setStorageModeOverride(null);
   }
 
   private create(config: SupabaseConfig): SupabaseClient {

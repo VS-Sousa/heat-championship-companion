@@ -1,0 +1,9 @@
+{
+  "name": "heat-championship-api",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Placeholder for the future local API. Not built or deployed with GitHub Pages.",
+  "scripts": {
+    "start": "node -e \"console.log('Local API not implemented yet. See server/README.md.')\""
+  }
+}

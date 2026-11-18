@@ -1,3 +1,4 @@
+# Publishes only the Angular SPA. server/ and docker-compose are not part of the artifact.
 name: Deploy GitHub Pages
 
 on:
@@ -23,6 +24,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
+      # Root package is the web app only (server/ has its own placeholder package.json).
       - run: npm ci
       - run: npx ng build --base-href /${{ github.event.repository.name }}/
       - uses: actions/upload-pages-artifact@v3

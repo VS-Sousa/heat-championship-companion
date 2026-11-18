@@ -50,8 +50,11 @@
             <a routerLink="/connect" class="heat-btn-primary">
               {{ 'landing.cta' | t }}
             </a>
+            <button type="button" class="heat-btn-secondary" (click)="enterDemo()">
+              {{ 'landing.ctaDemo' | t }}
+            </button>
           }
-          <a href="#setup" class="heat-btn-secondary">
+          <a href="#setup" class="heat-btn-ghost">
             {{ 'landing.ctaSetup' | t }}
           </a>
           <a href="#use" class="heat-btn-ghost">

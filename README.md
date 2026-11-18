@@ -39,6 +39,10 @@ npm start
 
 Abra `http://localhost:4200`.
 
+A SPA usa um `DataProvider` (`supabase` | `preview` | `local`). O default é **BYOS Supabase**; na landing dá para **Experimentar demo** (`preview`, dados em memória/`localStorage`). O modo `local` aponta para a API em [`server/`](server/) (ainda stub).
+
+O monorepo mantém o frontend Angular na raiz e reserva `server/` + [`docker-compose.yml`](docker-compose.yml) para o backend local futuro. **GitHub Pages publica só o build estático do Angular** — nada de `server/` entra no artefato.
+
 ### Build & deploy (GitHub Pages)
 
 ```bash

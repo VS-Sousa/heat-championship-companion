@@ -1,0 +1,26 @@
+# Local stack stub — not used by GitHub Pages.
+# Future: PostgreSQL + server/ API for storageMode=local.
+services:
+  db:
+    image: postgres:16-alpine
+    profiles: ['local']
+    environment:
+      POSTGRES_USER: heat
+      POSTGRES_PASSWORD: heat
+      POSTGRES_DB: heat
+    ports:
+      - '5432:5432'
+    volumes:
+      - heat_pg_data:/var/lib/postgresql/data
+
+  # api:
+  #   build: ./server
+  #   profiles: ['local']
+  #   depends_on: [db]
+  #   ports:
+  #     - '3000:3000'
+  #   environment:
+  #     DATABASE_URL: postgres://heat:heat@db:5432/heat
+
+volumes:
+  heat_pg_data:

@@ -1,3 +1,5 @@
+import { StorageMode } from '../data/storage-mode';
+
 // --- BYOS & Session Types ---
 export interface SupabaseConfig {
   url: string;
@@ -6,6 +8,8 @@ export interface SupabaseConfig {
 }
 
 export interface UserSession {
+  /** Active data backend; defaults to supabase for legacy sessions. */
+  storageMode?: StorageMode;
   config: SupabaseConfig;
   user: {
     id: string;
@@ -14,6 +18,12 @@ export interface UserSession {
   } | null;
   expiresAt: number;
 }
+
+/** Placeholder config stored for preview-mode sessions (no network). */
+export const PREVIEW_SESSION_CONFIG: SupabaseConfig = {
+  url: 'preview://local',
+  publishableKey: 'preview',
+};
 
 // --- Domain Models ---
 export interface Car {

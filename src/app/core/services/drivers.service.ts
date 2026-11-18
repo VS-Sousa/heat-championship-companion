@@ -1,80 +1,28 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
+import { DATA_PROVIDER } from '../data/data-provider.token';
 import { Driver } from '../models/domain.models';
-import { mapDriver } from './mappers';
-import { SupabaseService } from './supabase.service';
 
 @Injectable({ providedIn: 'root' })
 export class DriversService {
-  constructor(private readonly supabase: SupabaseService) {}
+  private readonly provider = inject(DATA_PROVIDER);
 
-  async list(): Promise<Driver[]> {
-    const { data, error } = await this.supabase
-      .getClient()
-      .from('drivers')
-      .select('*')
-      .order('number');
-    if (error) throw new Error(error.message);
-    return (data ?? []).map((row) => mapDriver(row as Record<string, unknown>));
+  list(): Promise<Driver[]> {
+    return this.provider.drivers.list();
   }
 
-  async getById(id: string): Promise<Driver | null> {
-    const { data, error } = await this.supabase
-      .getClient()
-      .from('drivers')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    return data ? mapDriver(data as Record<string, unknown>) : null;
+  getById(id: string): Promise<Driver | null> {
+    return this.provider.drivers.getById(id);
   }
 
-  async create(input: Omit<Driver, 'id'>): Promise<Driver> {
-    const { data, error } = await this.supabase
-      .getClient()
-      .from('drivers')
-      .insert({
-        name: input.name,
-        nickname: input.nickname?.trim() || null,
-        abbreviation: input.abbreviation.toUpperCase(),
-        number: input.number,
-        is_legend: input.isLegend,
-        fixed_car_id: input.fixedCarId ?? null,
-        favorite_car_id: input.favoriteCarId ?? null,
-        user_id: input.userId ?? null,
-      })
-      .select('*')
-      .single();
-    if (error) throw new Error(error.message);
-    return mapDriver(data as Record<string, unknown>);
+  create(input: Omit<Driver, 'id'>): Promise<Driver> {
+    return this.provider.drivers.create(input);
   }
 
-  async update(id: string, input: Omit<Driver, 'id'>): Promise<Driver> {
-    const { data, error } = await this.supabase
-      .getClient()
-      .from('drivers')
-      .update({
-        name: input.name,
-        nickname: input.nickname?.trim() || null,
-        abbreviation: input.abbreviation.toUpperCase(),
-        number: input.number,
-        is_legend: input.isLegend,
-        fixed_car_id: input.fixedCarId ?? null,
-        favorite_car_id: input.favoriteCarId ?? null,
-        user_id: input.userId ?? null,
-      })
-      .eq('id', id)
-      .select('*')
-      .single();
-    if (error) throw new Error(error.message);
-    return mapDriver(data as Record<string, unknown>);
+  update(id: string, input: Omit<Driver, 'id'>): Promise<Driver> {
+    return this.provider.drivers.update(id, input);
   }
 
-  async remove(id: string): Promise<void> {
-    const { error } = await this.supabase
-      .getClient()
-      .from('drivers')
-      .delete()
-      .eq('id', id);
-    if (error) throw new Error(error.message);
+  remove(id: string): Promise<void> {
+    return this.provider.drivers.remove(id);
   }
 }

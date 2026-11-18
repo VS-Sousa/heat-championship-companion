@@ -27,8 +27,11 @@ export const TRANSLATIONS: Record<Lang, Record<string, string>> = {
     'landing.lead':
       'Classificação com gráfico, calendário com resultados, garagem e BYOS — no clima vintage de Heat: Pedal to the Metal.',
     'landing.cta': 'Acessar a liga',
+    'landing.ctaDemo': 'Experimentar demo',
     'landing.ctaSetup': 'Como configurar',
     'landing.ctaUse': 'Como usar',
+    'preview.reset': 'Resetar demo',
+    'preview.badge': 'Demo',
     'landing.featuresTitle': 'O que tem na pista',
     'landing.feature1.title': 'Classificação & gráfico',
     'landing.feature1.body':
@@ -341,8 +344,11 @@ export const TRANSLATIONS: Record<Lang, Record<string, string>> = {
     'landing.lead':
       'Standings with charts, calendar with results, garage and BYOS — in the vintage Heat: Pedal to the Metal vibe.',
     'landing.cta': 'Access your league',
+    'landing.ctaDemo': 'Try the demo',
     'landing.ctaSetup': 'How to set up',
     'landing.ctaUse': 'How to use',
+    'preview.reset': 'Reset demo',
+    'preview.badge': 'Demo',
     'landing.featuresTitle': 'On the track',
     'landing.feature1.title': 'Standings & chart',
     'landing.feature1.body':

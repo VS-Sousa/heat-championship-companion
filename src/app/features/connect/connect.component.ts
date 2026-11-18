@@ -7,6 +7,8 @@ import { I18nService } from '../../core/i18n/i18n.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { PrefsBarComponent } from '../../shared/components/prefs-bar/prefs-bar.component';
+import { setStorageModeOverride } from '../../core/data/resolve-storage-mode';
+import { SessionService } from '../../core/services/session.service';
 
 @Component({
   selector: 'app-connect',
@@ -17,6 +19,7 @@ import { PrefsBarComponent } from '../../shared/components/prefs-bar/prefs-bar.c
 })
 export class ConnectComponent {
   private readonly supabase = inject(SupabaseService);
+  private readonly session = inject(SessionService);
   private readonly router = inject(Router);
   private readonly i18n = inject(I18nService);
 
@@ -47,6 +50,9 @@ export class ConnectComponent {
         throw new Error(this.i18n.t('connect.errorRequired'));
       }
 
+      const switchingFromPreview = this.session.isPreview();
+      setStorageModeOverride('supabase');
+
       if (this.mode === 'guest') {
         await this.supabase.connectAsGuest(config);
       } else {
@@ -58,6 +64,13 @@ export class ConnectComponent {
           this.email.trim(),
           this.password
         );
+      }
+
+      if (switchingFromPreview) {
+        const base = document.querySelector('base')?.href ?? '/';
+        window.location.href = `${base}#/dashboard`;
+        window.location.reload();
+        return;
       }
 
       await this.router.navigateByUrl('/dashboard');

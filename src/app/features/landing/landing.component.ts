@@ -24,6 +24,16 @@ export class LandingComponent {
   }
 
   get isConnected(): boolean {
+    if (this.session.isPreview()) {
+      return this.session.isConnected();
+    }
     return this.session.isConnected() && this.supabase.isReady();
+  }
+
+  /** Offline demo — reload so DATA_PROVIDER factory picks preview. */
+  enterDemo(): void {
+    this.session.savePreview(true);
+    window.location.hash = '#/dashboard';
+    window.location.reload();
   }
 }

@@ -7,6 +7,8 @@ import { ThemeService } from '../../../core/services/theme.service';
 import { I18nService } from '../../../core/i18n/i18n.service';
 import { TranslatePipe } from '../../../core/i18n/translate.pipe';
 import { PrefsBarComponent } from '../prefs-bar/prefs-bar.component';
+import { DATA_PROVIDER } from '../../../core/data/data-provider.token';
+import { setStorageModeOverride } from '../../../core/data/resolve-storage-mode';
 
 @Component({
   selector: 'app-shell',
@@ -26,6 +28,7 @@ export class ShellComponent {
   readonly session = inject(SessionService);
   readonly i18n = inject(I18nService);
   private readonly supabase = inject(SupabaseService);
+  private readonly provider = inject(DATA_PROVIDER);
   private readonly router = inject(Router);
 
   constructor() {
@@ -63,7 +66,20 @@ export class ShellComponent {
     return this.session.username();
   }
 
+  resetDemo(): void {
+    this.provider.resetPreview?.();
+    window.location.reload();
+  }
+
   async disconnect(): Promise<void> {
+    if (this.session.isPreview()) {
+      setStorageModeOverride(null);
+      this.session.clear();
+      const base = document.querySelector('base')?.href ?? '/';
+      window.location.href = `${base}#/`;
+      window.location.reload();
+      return;
+    }
     await this.supabase.disconnect();
     await this.router.navigateByUrl('/');
   }

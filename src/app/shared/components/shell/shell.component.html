@@ -82,6 +82,20 @@
 
       <div class="flex shrink-0 items-center gap-1.5 sm:gap-3">
         <app-prefs-bar />
+        @if (session.isPreview()) {
+          <span
+            class="hidden rounded-sm bg-heat-yellow/20 px-2 py-1 font-mono text-[10px] uppercase tracking-widest text-heat-yellow sm:inline"
+          >
+            {{ 'preview.badge' | t }}
+          </span>
+          <button
+            type="button"
+            class="heat-chip hidden sm:inline-flex"
+            (click)="resetDemo()"
+          >
+            {{ 'preview.reset' | t }}
+          </button>
+        }
         <div class="hidden text-right md:block">
           <p class="font-mono text-xs uppercase tracking-widest text-heat-yellow">
             {{ roleLabel() }}
