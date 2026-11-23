@@ -1,0 +1,148 @@
+<div class="heat-page-header">
+  <div class="min-w-0">
+    <p class="heat-subtitle">{{ 'scoring.eyebrow' | t }}</p>
+    <h1 class="heat-title">{{ 'scoring.title' | t }}</h1>
+  </div>
+  @if (session.isHost()) {
+    <button type="button" class="heat-btn-primary w-full sm:w-auto" (click)="startCreate()">
+      {{ 'scoring.add' | t }}
+    </button>
+  }
+</div>
+
+@if (error()) {
+  <div class="mb-4 rounded-sm border border-heat-red/40 bg-heat-red/10 px-4 py-3">{{ error() }}</div>
+}
+
+<section class="heat-panel p-4 sm:p-5">
+  @if (loading()) {
+    <p class="text-heat-muted">{{ 'scoring.loading' | t }}</p>
+  } @else {
+    <div class="space-y-3">
+      @for (system of systems(); track system.id) {
+        <div
+          class="flex flex-col gap-3 border-b border-heat-border pb-3 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div class="min-w-0">
+            <p class="truncate font-display text-xl tracking-wider">
+              {{ system.name }}
+              @if (system.isBuiltin) {
+                <span
+                  class="ml-2 rounded-sm bg-heat-yellow/20 px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest text-heat-yellow"
+                >
+                  {{ 'scoring.builtin' | t }}
+                </span>
+              }
+            </p>
+            <p class="break-words font-mono text-sm text-heat-muted">
+              {{ system.points.join(' · ') }}
+            </p>
+            <p class="text-xs uppercase tracking-[0.16em] text-heat-muted">
+              FL +{{ system.bonusFastestLap }} · Pole +{{ system.bonusPole }} · DOTD +{{ system.bonusDriverOfDay }}
+            </p>
+          </div>
+          @if (session.isHost()) {
+            <div class="flex shrink-0 gap-2">
+              <button type="button" class="heat-btn-ghost text-sm" (click)="startEdit(system)">
+                {{ 'scoring.editBtn' | t }}
+              </button>
+              @if (!system.isBuiltin) {
+                <button
+                  type="button"
+                  class="heat-btn-ghost text-sm text-heat-red"
+                  (click)="remove(system)"
+                >
+                  {{ 'scoring.deleteBtn' | t }}
+                </button>
+              }
+            </div>
+          }
+        </div>
+      } @empty {
+        <p class="text-heat-muted">{{ 'scoring.empty' | t }}</p>
+      }
+    </div>
+  }
+</section>
+
+@if (formOpen()) {
+  <div
+    class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/55 p-4"
+    role="dialog"
+    aria-modal="true"
+    (click)="closeForm()"
+  >
+    <div
+      class="heat-panel my-8 w-full max-w-lg space-y-4 p-5 shadow-xl"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="flex items-start justify-between gap-3">
+        <h2 class="font-display text-2xl tracking-wider">
+          {{ (editingId ? 'scoring.edit' : 'scoring.add') | t }}
+        </h2>
+        <button type="button" class="heat-btn-ghost text-sm" (click)="closeForm()">
+          {{ 'common.close' | t }}
+        </button>
+      </div>
+
+      <form class="space-y-4" (ngSubmit)="save()">
+        <div>
+          <label class="heat-label" for="scName">{{ 'scoring.name' | t }}</label>
+          <input id="scName" class="heat-input" name="name" [(ngModel)]="name" />
+        </div>
+        <div>
+          <label class="heat-label" for="scPoints">{{ 'scoring.points' | t }}</label>
+          <input
+            id="scPoints"
+            class="heat-input font-mono"
+            name="pointsText"
+            [(ngModel)]="pointsText"
+            placeholder="25,18,15,12,10,8,6,4,2,1"
+          />
+          <p class="mt-1 text-xs text-heat-muted">{{ 'scoring.pointsHint' | t }}</p>
+        </div>
+        <div class="grid gap-3 sm:grid-cols-3">
+          <div>
+            <label class="heat-label" for="scFl">{{ 'scoring.bonusFastestLap' | t }}</label>
+            <input
+              id="scFl"
+              class="heat-input"
+              type="number"
+              min="0"
+              name="bonusFastestLap"
+              [(ngModel)]="bonusFastestLap"
+            />
+          </div>
+          <div>
+            <label class="heat-label" for="scPole">{{ 'scoring.bonusPole' | t }}</label>
+            <input
+              id="scPole"
+              class="heat-input"
+              type="number"
+              min="0"
+              name="bonusPole"
+              [(ngModel)]="bonusPole"
+            />
+          </div>
+          <div>
+            <label class="heat-label" for="scDotd">{{ 'scoring.bonusDriverOfDay' | t }}</label>
+            <input
+              id="scDotd"
+              class="heat-input"
+              type="number"
+              min="0"
+              name="bonusDriverOfDay"
+              [(ngModel)]="bonusDriverOfDay"
+            />
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button type="submit" class="heat-btn-primary">{{ 'scoring.save' | t }}</button>
+          <button type="button" class="heat-btn-secondary" (click)="closeForm()">
+            {{ 'common.close' | t }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

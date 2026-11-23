@@ -2,11 +2,14 @@ import {
   BreakdownStatRow,
   CarStatRow,
   CompletePlannedRaceRequest,
+  CompletePostRaceRequest,
   DriverStatRow,
   HeadToHeadRow,
   LogStandaloneRaceRequest,
   Race,
   RaceResult,
+  SavePreRaceRequest,
+  SaveTelemetryRequest,
   ResultHistoryRow,
   TrackDriverHistoryRow,
 } from '../../../models/domain.models';
@@ -17,6 +20,7 @@ import {
   validateResults as validateRaceResults,
 } from '../../shared/race-rules';
 import { newId, PreviewStore } from './preview-store';
+import { evaluateRaceBadges } from '../../shared/badge-evaluator';
 
 export class PreviewRacesRepo implements RacesRepository {
   constructor(
@@ -97,6 +101,51 @@ export class PreviewRacesRepo implements RacesRepository {
       draft.races[index] = cancelled;
     });
     return cancelled!;
+  }
+
+  async savePreRace(request: SavePreRaceRequest): Promise<Race> {
+    let saved!: Race;
+    this.store.update((db) => {
+      const existing = request.raceId ? db.races.find((x) => x.id === request.raceId) : undefined;
+      saved = {
+        ...(existing ?? { id: newId(), raceType: request.championshipId ? 'championship' : 'standalone', status: 'pre_race' as const, createdAt: new Date().toISOString() }),
+        championshipId: request.championshipId ?? existing?.championshipId,
+        trackId: request.trackId, name: request.name, abbreviation: request.abbreviation,
+        associationId: request.associationId, scoringSystemId: request.scoringSystemId,
+        reverseDirection: request.reverseDirection, weatherCondition: request.weatherCondition,
+        trackCondition: request.trackCondition, racedAt: request.racedAt,
+        entries: request.entries, status: 'pre_race', stage: 'pre_race',
+      };
+      if (existing) db.races[db.races.indexOf(existing)] = saved; else db.races.push(saved);
+    });
+    return saved;
+  }
+
+  async startLive(raceId: string): Promise<Race> { return this.setStage(raceId, 'in_race'); }
+  async saveTelemetry(request: SaveTelemetryRequest): Promise<Race> {
+    let saved!: Race;
+    this.store.update((db) => { const i = db.races.findIndex((x) => x.id === request.raceId); if (i < 0) throw new Error('Race not found.'); saved = { ...db.races[i], telemetry: request.telemetry }; db.races[i] = saved; });
+    return saved;
+  }
+  async openPodium(raceId: string): Promise<Race> { return this.setStage(raceId, 'post_race'); }
+  async completePostRace(request: CompletePostRaceRequest): Promise<Race> {
+    this.validateResults(request.results);
+    let completed!: Race;
+    this.store.update((db) => {
+      const i = db.races.findIndex((x) => x.id === request.raceId); if (i < 0) throw new Error('Race not found.');
+      completed = { ...db.races[i], status: 'completed', stage: 'post_race' }; db.races[i] = completed;
+      db.results = db.results.filter((x) => x.raceId !== request.raceId);
+      db.results.push(...request.results.map((x) => ({ id: newId(), raceId: request.raceId, ...x })));
+      db.badgeAwards = db.badgeAwards.filter((x) => x.raceId !== request.raceId);
+      db.badgeAwards.push(...evaluateRaceBadges({ raceId: request.raceId, associationId: completed.associationId, telemetry: completed.telemetry ?? [], newId }));
+    });
+    return completed;
+  }
+
+  private async setStage(raceId: string, stage: 'in_race' | 'post_race'): Promise<Race> {
+    let saved!: Race;
+    this.store.update((db) => { const i = db.races.findIndex((x) => x.id === raceId); if (i < 0) throw new Error('Race not found.'); saved = { ...db.races[i], status: stage, stage }; db.races[i] = saved; });
+    return saved;
   }
 
   async getDriverStats(): Promise<DriverStatRow[]> {

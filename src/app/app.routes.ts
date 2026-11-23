@@ -76,6 +76,34 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'associations',
+        loadComponent: () =>
+          import('./features/associations/associations.component').then(
+            (m) => m.AssociationsComponent
+          ),
+      },
+      {
+        path: 'scoring-systems',
+        loadComponent: () =>
+          import('./features/scoring-systems/scoring-systems.component').then(
+            (m) => m.ScoringSystemsComponent
+          ),
+      },
+      {
+        path: 'garage-upgrades',
+        loadComponent: () =>
+          import('./features/garage-upgrades/garage-upgrades.component').then(
+            (m) => m.GarageUpgradesComponent
+          ),
+      },
+      {
+        path: 'badges',
+        loadComponent: () =>
+          import('./features/badges/badges.component').then(
+            (m) => m.BadgesComponent
+          ),
+      },
+      {
         path: 'championships',
         loadComponent: () =>
           import('./features/championships/championships.component').then(

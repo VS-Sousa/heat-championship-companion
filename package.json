@@ -6,7 +6,10 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "server:dev": "npm run dev --prefix server",
+    "server:install": "npm install --prefix server",
+    "local:up": "docker compose up --build"
   },
   "private": true,
   "dependencies": {

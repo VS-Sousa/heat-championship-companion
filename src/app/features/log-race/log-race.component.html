@@ -3,6 +3,25 @@
   <h1 class="heat-title break-words">{{ 'logRace.title' | t }}</h1>
 </div>
 
+<!-- Wizard stepper -->
+<ol class="mb-6 grid grid-cols-3 gap-2">
+  @for (s of stepLabels; track s.step) {
+    <li
+      class="rounded-sm border px-2 py-2 text-center text-xs uppercase tracking-[0.14em] sm:text-sm"
+      [ngClass]="
+        step() === s.step
+          ? 'border-heat-yellow bg-heat-yellow/15 text-heat-yellow'
+          : step() > s.step
+            ? 'border-heat-border text-heat-ink'
+            : 'border-heat-border text-heat-muted'
+      "
+      [attr.aria-current]="step() === s.step ? 'step' : null"
+    >
+      <span class="font-mono">{{ s.step }}</span> · {{ s.key | t }}
+    </li>
+  }
+</ol>
+
 @if (error()) {
   <div class="mb-4 rounded-sm border border-heat-red/40 bg-heat-red/10 px-4 py-3" role="alert">
     {{ error() }}
@@ -17,237 +36,571 @@
 @if (loading()) {
   <p class="text-heat-muted">{{ 'logRace.loading' | t }}</p>
 } @else {
-  <form class="space-y-6" (ngSubmit)="submit()">
-    <section class="heat-panel grid gap-4 p-4 sm:p-5 md:grid-cols-2">
-      <div>
-        <label class="heat-label">{{ 'logRace.mode' | t }}</label>
-        <div class="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            class="rounded-sm border px-3 py-2 uppercase tracking-[0.14em]"
-            [ngClass]="
-              raceType() === 'championship'
-                ? 'border-heat-yellow bg-heat-yellow/15 text-heat-yellow'
-                : 'border-heat-border text-heat-muted'
-            "
-            (click)="raceType.set('championship')"
-          >
-            {{ 'logRace.championship' | t }}
-          </button>
-          <button
-            type="button"
-            class="rounded-sm border px-3 py-2 uppercase tracking-[0.14em]"
-            [ngClass]="
-              raceType() === 'standalone'
-                ? 'border-heat-yellow bg-heat-yellow/15 text-heat-yellow'
-                : 'border-heat-border text-heat-muted'
-            "
-            (click)="raceType.set('standalone')"
-          >
-            {{ 'logRace.standalone' | t }}
-          </button>
-        </div>
-      </div>
-
-      @if (raceType() === 'championship') {
+  <!-- ======================= STEP 1: PRE_RACE ======================= -->
+  @if (step() === 1) {
+    <form class="space-y-6" (ngSubmit)="saveAndContinue()">
+      <section class="heat-panel grid gap-4 p-4 sm:p-5 md:grid-cols-2">
         <div>
-          <label class="heat-label" for="championship">{{ 'logRace.championship' | t }}</label>
+          <label class="heat-label">{{ 'logRace.mode' | t }}</label>
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              class="rounded-sm border px-3 py-2 uppercase tracking-[0.14em]"
+              [ngClass]="
+                raceType() === 'championship'
+                  ? 'border-heat-yellow bg-heat-yellow/15 text-heat-yellow'
+                  : 'border-heat-border text-heat-muted'
+              "
+              (click)="setRaceType('championship')"
+            >
+              {{ 'logRace.championship' | t }}
+            </button>
+            <button
+              type="button"
+              class="rounded-sm border px-3 py-2 uppercase tracking-[0.14em]"
+              [ngClass]="
+                raceType() === 'standalone'
+                  ? 'border-heat-yellow bg-heat-yellow/15 text-heat-yellow'
+                  : 'border-heat-border text-heat-muted'
+              "
+              (click)="setRaceType('standalone')"
+            >
+              {{ 'logRace.standalone' | t }}
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="heat-label" for="association">{{ 'logRace.association' | t }}</label>
           <app-searchable-select
-            inputId="championship"
-            name="championshipId"
-            [ngModel]="championshipId()"
-            (ngModelChange)="onChampionshipChange($event)"
-            [options]="championshipOptions()"
-            [placeholder]="'logRace.selectChampionship' | t"
+            inputId="association"
+            name="associationId"
+            [ngModel]="associationId()"
+            (ngModelChange)="associationId.set($event)"
+            [options]="associationOptions()"
           />
         </div>
+
+        @if (raceType() === 'championship') {
+          <div>
+            <label class="heat-label" for="championship">{{ 'logRace.championship' | t }}</label>
+            <app-searchable-select
+              inputId="championship"
+              name="championshipId"
+              [ngModel]="championshipId()"
+              (ngModelChange)="onChampionshipChange($event)"
+              [options]="championshipOptions()"
+              [placeholder]="'logRace.selectChampionship' | t"
+            />
+          </div>
+          <div>
+            <label class="heat-label" for="planned">{{ 'logRace.plannedRound' | t }}</label>
+            <app-searchable-select
+              inputId="planned"
+              name="plannedRaceId"
+              [ngModel]="plannedRaceId()"
+              (ngModelChange)="onPlannedRaceChange($event)"
+              [options]="plannedRaceOptions()"
+              [placeholder]="'logRace.selectPlanned' | t"
+            />
+          </div>
+        }
+
         <div>
-          <label class="heat-label" for="planned">{{ 'logRace.plannedRound' | t }}</label>
+          <label class="heat-label" for="track">{{ 'logRace.track' | t }}</label>
           <app-searchable-select
-            inputId="planned"
-            name="plannedRaceId"
-            [ngModel]="plannedRaceId()"
-            (ngModelChange)="onPlannedRaceChange($event)"
-            [options]="plannedRaceOptions()"
-            [placeholder]="'logRace.selectPlanned' | t"
+            inputId="track"
+            name="trackId"
+            [ngModel]="trackId()"
+            (ngModelChange)="trackId.set($event)"
+            [options]="trackOptions()"
+            [placeholder]="'logRace.selectTrack' | t"
           />
+          <button
+            type="button"
+            class="heat-btn-ghost mt-2 text-sm"
+            (click)="showRaffle.set(true)"
+          >
+            {{ 'raffle.drawTrack' | t }}
+          </button>
         </div>
-      }
 
-      <div>
-        <label class="heat-label" for="track">{{ 'logRace.track' | t }}</label>
-        <app-searchable-select
-          inputId="track"
-          name="trackId"
-          [(ngModel)]="trackId"
-          [options]="trackOptions()"
-          [placeholder]="'logRace.selectTrack' | t"
-        />
-        <button
-          type="button"
-          class="heat-btn-ghost mt-2 text-sm"
-          (click)="showRaffle.set(true)"
-        >
-          {{ 'raffle.drawTrack' | t }}
-        </button>
-      </div>
+        <div class="flex items-end">
+          <label
+            class="flex items-center gap-2 text-sm uppercase tracking-[0.14em] text-heat-muted"
+            for="reverseDirection"
+          >
+            <input
+              id="reverseDirection"
+              type="checkbox"
+              name="reverseDirection"
+              [ngModel]="reverseDirection()"
+              (ngModelChange)="reverseDirection.set($event)"
+            />
+            {{ 'logRace.reverseDirection' | t }}
+          </label>
+        </div>
 
-      <div>
-        <label class="heat-label" for="racedAt">{{ 'logRace.racedAt' | t }}</label>
-        <input
-          id="racedAt"
-          class="heat-input"
-          type="date"
-          name="racedAt"
-          [(ngModel)]="racedAt"
-        />
-      </div>
-
-      <div>
-        <label class="heat-label" for="weather">{{ 'logRace.weather' | t }}</label>
-        <app-searchable-select
-          inputId="weather"
-          name="weatherCondition"
-          [(ngModel)]="weatherCondition"
-          [options]="weatherOptions()"
-        />
-      </div>
-
-      <div class="flex items-end">
-        <label
-          class="flex items-center gap-2 text-sm uppercase tracking-[0.14em] text-heat-muted"
-          for="useTrackConditions"
-        >
+        <div>
+          <label class="heat-label" for="raceName">{{ 'logRace.raceName' | t }}</label>
           <input
-            id="useTrackConditions"
-            type="checkbox"
-            name="useTrackConditions"
-            [(ngModel)]="useTrackConditions"
+            id="raceName"
+            class="heat-input"
+            name="raceName"
+            [(ngModel)]="raceName"
           />
-          {{ 'logRace.trackCondition' | t }}
-        </label>
-      </div>
-    </section>
+        </div>
+        <div>
+          <label class="heat-label" for="raceAbbr">{{ 'logRace.raceAbbreviation' | t }}</label>
+          <input
+            id="raceAbbr"
+            class="heat-input font-mono uppercase"
+            name="raceAbbreviation"
+            maxlength="8"
+            [(ngModel)]="raceAbbreviation"
+          />
+        </div>
 
-    <app-grid-draw
-      [drivers]="selectedDrivers()"
-      [standings]="standings()"
-      (assigned)="onGridAssigned($event)"
-    />
+        <div>
+          <label class="heat-label" for="scoringSystem">{{ 'logRace.scoringSystem' | t }}</label>
+          <app-searchable-select
+            inputId="scoringSystem"
+            name="scoringSystemId"
+            [ngModel]="scoringSystemId()"
+            (ngModelChange)="scoringSystemId.set($event)"
+            [options]="scoringOptions()"
+          />
+        </div>
 
-    <section class="heat-panel p-4 sm:p-5">
-      <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 class="font-display text-xl tracking-wider sm:text-2xl">
-          {{ 'logRace.results' | t }}
-        </h2>
-        <button
-          type="button"
-          class="heat-btn-secondary w-full sm:w-auto"
-          (click)="addResultRow()"
-        >
-          {{ 'logRace.addDriver' | t }}
-        </button>
-      </div>
+        <div>
+          <label class="heat-label" for="racedAt">{{ 'logRace.racedAt' | t }}</label>
+          <input
+            id="racedAt"
+            class="heat-input"
+            type="date"
+            name="racedAt"
+            [(ngModel)]="racedAt"
+          />
+        </div>
 
-      <div class="space-y-4">
-        @for (row of results(); track $index; let i = $index) {
-          <div
-            class="grid grid-cols-2 gap-3 rounded-sm border border-heat-border bg-heat-steel/40 p-3 md:grid-cols-6"
+        <div>
+          <label class="heat-label" for="weather">{{ 'logRace.weather' | t }}</label>
+          <app-searchable-select
+            inputId="weather"
+            name="weatherCondition"
+            [(ngModel)]="weatherCondition"
+            [options]="weatherOptions()"
+          />
+        </div>
+
+        <div class="flex flex-col justify-end gap-2">
+          <label
+            class="flex items-center gap-2 text-sm uppercase tracking-[0.14em] text-heat-muted"
+            for="useTrackConditions"
           >
-            <div class="col-span-2 md:col-span-2">
-              <label class="heat-label">{{ 'logRace.driver' | t }}</label>
-              <app-searchable-select
-                [name]="'driver-' + i"
-                [ngModel]="row.driverId"
-                (ngModelChange)="onDriverChange(i, $event)"
-                [options]="driverOptions(i)"
-                [placeholder]="'logRace.select' | t"
+            <input
+              id="useTrackConditions"
+              type="checkbox"
+              name="useTrackConditions"
+              [(ngModel)]="useTrackConditions"
+            />
+            {{ 'logRace.trackCondition' | t }}
+          </label>
+          @if (!isChampionshipMode() || !selectedChampionship()?.useGarage) {
+            <label
+              class="flex items-center gap-2 text-sm uppercase tracking-[0.14em] text-heat-muted"
+              for="useGarageToggle"
+            >
+              <input
+                id="useGarageToggle"
+                type="checkbox"
+                name="useGarageToggle"
+                [ngModel]="useGarageToggle()"
+                (ngModelChange)="useGarageToggle.set($event)"
               />
-            </div>
+              {{ 'logRace.useGarage' | t }}
+            </label>
+          } @else {
+            <p class="text-sm uppercase tracking-[0.14em] text-heat-yellow">
+              ✓ {{ 'logRace.useGarage' | t }}
+            </p>
+          }
+        </div>
+      </section>
 
-            <div class="col-span-2 md:col-span-2">
-              <label class="heat-label">{{ 'logRace.car' | t }}</label>
-              <div class="flex min-w-0 items-center gap-2">
-                <span
-                  class="h-4 w-4 shrink-0 rounded-full border border-heat-border"
-                  [style.backgroundColor]="carById(row.carId)?.colorHex || 'transparent'"
-                  [class.opacity-30]="!row.carId"
-                ></span>
+      <app-grid-draw
+        [drivers]="selectedDrivers()"
+        [standings]="standings()"
+        (assigned)="onGridAssigned($event)"
+      />
+
+      <section class="heat-panel p-4 sm:p-5">
+        <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 class="font-display text-xl tracking-wider sm:text-2xl">
+            {{ 'logRace.entries' | t }}
+          </h2>
+          <button
+            type="button"
+            class="heat-btn-secondary w-full sm:w-auto"
+            (click)="addEntryRow()"
+          >
+            {{ 'logRace.addDriver' | t }}
+          </button>
+        </div>
+
+        <div class="space-y-4">
+          @for (row of entries(); track $index; let i = $index) {
+            <div
+              class="grid grid-cols-2 gap-3 rounded-sm border border-heat-border bg-heat-steel/40 p-3 md:grid-cols-5"
+            >
+              <div class="col-span-2 md:col-span-2">
+                <label class="heat-label">{{ 'logRace.driver' | t }}</label>
                 <app-searchable-select
-                  class="min-w-0 flex-1"
-                  [name]="'car-' + i"
-                  [ngModel]="row.carId"
-                  [disabled]="row.carLocked"
-                  (ngModelChange)="onCarChange(i, $event)"
-                  [options]="carOptions(i)"
+                  [name]="'driver-' + i"
+                  [ngModel]="row.driverId"
+                  (ngModelChange)="onDriverChange(i, $event)"
+                  [options]="driverOptions(i)"
                   [placeholder]="'logRace.select' | t"
                 />
               </div>
-            </div>
 
-            <div>
-              <label class="heat-label">{{ 'logRace.grid' | t }}</label>
-              <input
-                class="heat-input"
-                type="number"
-                min="1"
-                [ngModel]="row.gridPosition"
-                [name]="'grid-' + i"
-                (ngModelChange)="updateField(i, 'gridPosition', +$event)"
-              />
-            </div>
+              <div class="col-span-2 md:col-span-2">
+                <label class="heat-label">{{ 'logRace.car' | t }}</label>
+                <div class="flex min-w-0 items-center gap-2">
+                  <span
+                    class="h-4 w-4 shrink-0 rounded-full border border-heat-border"
+                    [style.backgroundColor]="carById(row.carId)?.colorHex || 'transparent'"
+                    [class.opacity-30]="!row.carId"
+                  ></span>
+                  <app-searchable-select
+                    class="min-w-0 flex-1"
+                    [name]="'car-' + i"
+                    [ngModel]="row.carId"
+                    [disabled]="row.carLocked"
+                    (ngModelChange)="onCarChange(i, $event)"
+                    [options]="carOptions(i)"
+                    [placeholder]="'logRace.select' | t"
+                  />
+                </div>
+              </div>
 
-            <div>
-              <label class="heat-label">{{ 'logRace.finish' | t }}</label>
-              <input
-                class="heat-input"
-                type="number"
-                min="1"
-                [ngModel]="row.position"
-                [name]="'pos-' + i"
-                (ngModelChange)="updateField(i, 'position', +$event)"
-              />
-            </div>
+              <div>
+                <label class="heat-label">{{ 'logRace.grid' | t }}</label>
+                <input
+                  class="heat-input"
+                  type="number"
+                  min="1"
+                  [ngModel]="row.gridPosition"
+                  [name]="'grid-' + i"
+                  (ngModelChange)="updateEntry(i, 'gridPosition', +$event)"
+                />
+              </div>
 
-            <div
-              class="col-span-2 flex flex-wrap items-center justify-between gap-2 md:col-span-6"
+              @if (useGarage()) {
+                <div class="col-span-2 md:col-span-5">
+                  <p class="heat-label">{{ 'logRace.loadout' | t }}</p>
+                  <div class="flex flex-wrap gap-2">
+                    @for (upgrade of upgrades(); track upgrade.id) {
+                      <label
+                        class="flex cursor-pointer items-center gap-2 rounded-sm border px-2 py-1 text-xs uppercase tracking-[0.1em]"
+                        [ngClass]="
+                          row.loadout.includes(upgrade.id)
+                            ? 'border-heat-yellow bg-heat-yellow/15 text-heat-yellow'
+                            : 'border-heat-border text-heat-muted'
+                        "
+                      >
+                        <input
+                          type="checkbox"
+                          [name]="'loadout-' + i + '-' + upgrade.id"
+                          [ngModel]="row.loadout.includes(upgrade.id)"
+                          (ngModelChange)="toggleLoadout(i, upgrade.id, $event)"
+                        />
+                        {{ upgrade.name }}
+                        <span class="font-mono">({{ upgrade.heatCost }})</span>
+                      </label>
+                    } @empty {
+                      <p class="text-sm text-heat-muted">{{ 'garage.empty' | t }}</p>
+                    }
+                  </div>
+                </div>
+              }
+
+              <div class="col-span-2 flex justify-end md:col-span-5">
+                <button
+                  type="button"
+                  class="heat-btn-ghost text-sm text-heat-red"
+                  (click)="removeEntryRow(i)"
+                  [disabled]="entries().length <= 1"
+                >
+                  {{ 'logRace.remove' | t }}
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+
+      <button type="submit" class="heat-btn-primary w-full sm:w-auto" [disabled]="saving()">
+        {{ saving() ? ('logRace.saving' | t) : ('logRace.saveContinue' | t) }}
+      </button>
+    </form>
+
+    @if (showRaffle()) {
+      <app-track-raffle-modal
+        [tracks]="tracks()"
+        (selected)="onTrackRaffled($event)"
+        (closed)="showRaffle.set(false)"
+      />
+    }
+  }
+
+  <!-- ======================= STEP 2: IN_RACE ======================= -->
+  @if (step() === 2) {
+    <div class="space-y-6">
+      <section class="heat-panel p-4 sm:p-5">
+        <div class="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 class="font-display text-xl tracking-wider sm:text-2xl">
+            {{ 'telemetry.title' | t }}
+          </h2>
+          <p class="font-mono text-sm text-heat-yellow">
+            {{ raceName }} · {{ selectedTrack()?.name }}
+            @if (reverseDirection()) {
+              · ⟲
+            }
+          </p>
+        </div>
+
+        <p class="heat-label">{{ 'telemetry.selectDriver' | t }}</p>
+        <div class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          @for (driver of raceDrivers(); track driver.id) {
+            <button
+              type="button"
+              class="flex min-h-[4.5rem] flex-col items-center justify-center gap-1 rounded-sm border-2 px-2 py-3 text-center transition active:scale-[0.98]"
+              [ngClass]="
+                liveDriverId() === driver.id
+                  ? 'border-heat-yellow bg-heat-yellow/20 text-heat-yellow'
+                  : 'border-heat-border bg-heat-steel/40 text-heat-ink'
+              "
+              (click)="selectLiveDriver(driver.id)"
             >
+              <span class="flex items-center gap-2">
+                <span
+                  class="h-3 w-3 rounded-full border border-heat-border"
+                  [style.backgroundColor]="carColorForDriver(driver.id)"
+                ></span>
+                <span class="font-mono text-xs text-heat-muted">#{{ driver.number }}</span>
+              </span>
+              <span class="font-display text-lg leading-tight tracking-wider">
+                {{ driverShortLabel(driver) }}
+              </span>
+              <span class="font-mono text-xs text-heat-muted">{{ eventCount(driver.id) }}</span>
+            </button>
+          }
+        </div>
+
+        <p class="heat-label">{{ 'telemetry.selectEvent' | t }}</p>
+        <div class="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          @for (type of eventTypes; track type) {
+            <button
+              type="button"
+              class="min-h-[3.5rem] rounded-sm border-2 px-3 py-3 text-sm uppercase tracking-[0.12em] transition active:scale-[0.98]"
+              [ngClass]="
+                liveEventType() === type
+                  ? 'border-heat-yellow bg-heat-yellow/20 text-heat-yellow'
+                  : 'border-heat-border bg-heat-steel/40 text-heat-muted'
+              "
+              (click)="selectEventType(type)"
+            >
+              {{ 'telemetry.' + type | t }}
+            </button>
+          }
+        </div>
+
+        @if (needsCorner()) {
+          <p class="heat-label">{{ 'telemetry.selectCorner' | t }}</p>
+          @if (!displayCorners().length) {
+            <p class="mb-5 text-sm text-heat-muted">{{ 'telemetry.noCorners' | t }}</p>
+          } @else {
+            <div class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              @for (item of displayCorners(); track item.corner.order) {
+                <button
+                  type="button"
+                  class="min-h-[3.5rem] rounded-sm border-2 px-2 py-2 text-left transition active:scale-[0.98]"
+                  [ngClass]="
+                    liveCornerOrder() === item.corner.order
+                      ? 'border-heat-yellow bg-heat-yellow/20 text-heat-yellow'
+                      : 'border-heat-border bg-heat-steel/40 text-heat-ink'
+                  "
+                  (click)="liveCornerOrder.set(item.corner.order)"
+                >
+                  <span class="mr-1 font-mono text-xs text-heat-muted">{{ item.raceOrder }}</span>
+                  <span class="text-sm">{{ item.corner.name }}</span>
+                  <span class="block font-mono text-xs text-heat-muted">
+                    {{ item.corner.maxSpeed }}
+                  </span>
+                </button>
+              }
+            </div>
+          }
+        }
+
+        <div class="flex flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            class="heat-btn-primary min-h-[3.5rem] w-full sm:flex-1"
+            (click)="logEvent()"
+          >
+            {{ 'telemetry.log' | t }}
+          </button>
+          <button
+            type="button"
+            class="heat-btn-secondary min-h-[3.5rem] w-full sm:w-auto"
+            (click)="undoLastEvent()"
+            [disabled]="!telemetry().length"
+          >
+            {{ 'telemetry.undo' | t }}
+          </button>
+        </div>
+      </section>
+
+      <section class="heat-panel p-4 sm:p-5">
+        <h3 class="mb-3 font-display text-xl tracking-wider">{{ 'telemetry.events' | t }}</h3>
+        @if (!telemetry().length) {
+          <p class="text-heat-muted">{{ 'telemetry.noEvents' | t }}</p>
+        } @else {
+          <ol class="space-y-1 text-sm">
+            @for (event of telemetry(); track event.id; let i = $index) {
+              <li class="flex flex-wrap items-center justify-between gap-2 border-b border-heat-border/60 py-1">
+                <span>
+                  <span class="mr-2 font-mono text-heat-yellow">{{ i + 1 }}</span>
+                  {{ driverLabel(event.driverId) }}
+                </span>
+                <span class="text-heat-muted">
+                  {{ 'telemetry.' + event.type | t }}
+                  @if (event.cornerOrder !== undefined) {
+                    · {{ cornerName(event.cornerOrder) }}
+                  }
+                </span>
+              </li>
+            }
+          </ol>
+        }
+      </section>
+
+      <div class="flex flex-col gap-3 sm:flex-row">
+        <button type="button" class="heat-btn-secondary w-full sm:w-auto" (click)="backToPreRace()">
+          {{ 'logRace.back' | t }}
+        </button>
+        <button
+          type="button"
+          class="heat-btn-primary min-h-[3.5rem] w-full sm:w-auto"
+          [disabled]="saving()"
+          (click)="goToPodium()"
+        >
+          {{ saving() ? ('logRace.saving' | t) : ('logRace.goPodium' | t) }}
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- ======================= STEP 3: POST_RACE ======================= -->
+  @if (step() === 3) {
+    <div class="space-y-6">
+      <section class="heat-panel p-4 sm:p-5">
+        <h2 class="mb-4 font-display text-xl tracking-wider sm:text-2xl">
+          {{ 'logRace.results' | t }}
+        </h2>
+
+        <div class="space-y-3">
+          @for (row of finishRows(); track row.driverId; let i = $index; let first = $first; let last = $last) {
+            <div
+              class="grid grid-cols-2 items-center gap-3 rounded-sm border border-heat-border bg-heat-steel/40 p-3 md:grid-cols-6"
+            >
+              <div class="flex items-center gap-2 md:col-span-2">
+                <span class="w-10 font-display text-2xl text-heat-yellow">P{{ i + 1 }}</span>
+                <span
+                  class="h-4 w-4 shrink-0 rounded-full border border-heat-border"
+                  [style.backgroundColor]="carById(row.carId)?.colorHex || 'transparent'"
+                ></span>
+                <span class="min-w-0 truncate">{{ driverLabel(row.driverId) }}</span>
+              </div>
+
+              <div class="flex justify-end gap-2 md:justify-start">
+                <button
+                  type="button"
+                  class="heat-btn-secondary px-3 py-2"
+                  [attr.aria-label]="'logRace.moveUp' | t"
+                  [disabled]="first"
+                  (click)="moveFinishRow(i, -1)"
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  class="heat-btn-secondary px-3 py-2"
+                  [attr.aria-label]="'logRace.moveDown' | t"
+                  [disabled]="last"
+                  (click)="moveFinishRow(i, 1)"
+                >
+                  ↓
+                </button>
+              </div>
+
+              <div>
+                <label class="heat-label">{{ 'logRace.gapTurns' | t }}</label>
+                <input
+                  class="heat-input"
+                  type="number"
+                  min="0"
+                  [ngModel]="row.gapTurns"
+                  [name]="'gap-' + i"
+                  (ngModelChange)="updateFinishRow(i, 'gapTurns', +$event)"
+                />
+              </div>
+
               <label class="flex items-center gap-2 text-sm uppercase tracking-[0.14em] text-heat-muted">
                 <input
                   type="checkbox"
                   [ngModel]="row.dnf"
                   [name]="'dnf-' + i"
-                  (ngModelChange)="updateField(i, 'dnf', $event)"
+                  (ngModelChange)="updateFinishRow(i, 'dnf', $event)"
                 />
                 {{ 'logRace.dnf' | t }}
               </label>
-              <p class="font-mono text-sm text-heat-yellow">
-                {{ 'logRace.pts' | t }}: {{ pointsPreview(row) }}
+
+              <p class="text-right font-mono text-sm text-heat-yellow">
+                {{ 'logRace.pts' | t }}: {{ pointsPreview(row, i) }}
               </p>
-              <button
-                type="button"
-                class="heat-btn-ghost text-sm text-heat-red"
-                (click)="removeResultRow(i)"
-                [disabled]="results().length <= 1"
-              >
-                {{ 'logRace.remove' | t }}
-              </button>
             </div>
-          </div>
+          }
+        </div>
+      </section>
+
+      <section class="heat-panel p-4 sm:p-5">
+        <label class="heat-label" for="dotd">{{ 'logRace.driverOfDay' | t }}</label>
+        <app-searchable-select
+          inputId="dotd"
+          name="driverOfDay"
+          [ngModel]="driverOfDayId()"
+          (ngModelChange)="driverOfDayId.set($event)"
+          [options]="driverOfDayOptions()"
+        />
+        @if (activeScoringSystem(); as system) {
+          <p class="mt-2 text-xs uppercase tracking-[0.14em] text-heat-muted">
+            {{ 'logRace.pointsPreview' | t }}: {{ system.name }} · Pole +{{ system.bonusPole }} ·
+            DOTD +{{ system.bonusDriverOfDay }}
+          </p>
         }
-      </div>
-    </section>
+      </section>
 
-    <button type="submit" class="heat-btn-primary w-full sm:w-auto" [disabled]="saving()">
-      {{ saving() ? ('logRace.saving' | t) : ('logRace.submit' | t) }}
-    </button>
-  </form>
-
-  @if (showRaffle()) {
-    <app-track-raffle-modal
-      [tracks]="tracks()"
-      (selected)="onTrackRaffled($event)"
-      (closed)="showRaffle.set(false)"
-    />
+      <button
+        type="button"
+        class="heat-btn-primary w-full sm:w-auto"
+        [disabled]="saving()"
+        (click)="submitPostRace()"
+      >
+        {{ saving() ? ('logRace.saving' | t) : ('logRace.submitPost' | t) }}
+      </button>
+    </div>
   }
 }

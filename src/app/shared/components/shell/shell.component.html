@@ -70,6 +70,27 @@
                   <path d="M14 4l6 3-6 3V4Z" />
                   <path d="M14 4v11" />
                 }
+                @case ('associations') {
+                  <circle cx="8" cy="9" r="3" />
+                  <circle cx="17" cy="10" r="2.5" />
+                  <path d="M2 20c.8-3.5 3-5 6-5s5.2 1.5 6 5" />
+                  <path d="M15 15.5c2.5-.3 4.7.9 5.5 4.5" />
+                }
+                @case ('scoring') {
+                  <path d="M5 4h14v16H5z" />
+                  <path d="M9 9h6" />
+                  <path d="M9 13h6" />
+                  <path d="M9 17h3" />
+                }
+                @case ('garage') {
+                  <path d="M3 10l9-6 9 6v10H3V10Z" />
+                  <path d="M8 20v-6h8v6" />
+                  <path d="M8 17h8" />
+                }
+                @case ('badges') {
+                  <circle cx="12" cy="9" r="5" />
+                  <path d="M9 13.5L7 21l5-3 5 3-2-7.5" />
+                }
                 @case ('logRace') {
                   <circle cx="12" cy="12" r="9" />
                   <path d="M12 7v5l3 2" />
@@ -95,6 +116,13 @@
           >
             {{ 'preview.reset' | t }}
           </button>
+        }
+        @if (session.isLocal()) {
+          <span
+            class="hidden rounded-sm bg-heat-yellow/20 px-2 py-1 font-mono text-[10px] uppercase tracking-widest text-heat-yellow sm:inline"
+          >
+            {{ 'connect.backendLocal' | t }}
+          </span>
         }
         <div class="hidden text-right md:block">
           <p class="font-mono text-xs uppercase tracking-widest text-heat-yellow">
@@ -202,6 +230,27 @@
                   <path d="M4 19c2-1 4-1 6 0s4 1 6 0 4-1 6 0" />
                   <path d="M14 4l6 3-6 3V4Z" />
                   <path d="M14 4v11" />
+                }
+                @case ('associations') {
+                  <circle cx="8" cy="9" r="3" />
+                  <circle cx="17" cy="10" r="2.5" />
+                  <path d="M2 20c.8-3.5 3-5 6-5s5.2 1.5 6 5" />
+                  <path d="M15 15.5c2.5-.3 4.7.9 5.5 4.5" />
+                }
+                @case ('scoring') {
+                  <path d="M5 4h14v16H5z" />
+                  <path d="M9 9h6" />
+                  <path d="M9 13h6" />
+                  <path d="M9 17h3" />
+                }
+                @case ('garage') {
+                  <path d="M3 10l9-6 9 6v10H3V10Z" />
+                  <path d="M8 20v-6h8v6" />
+                  <path d="M8 17h8" />
+                }
+                @case ('badges') {
+                  <circle cx="12" cy="9" r="5" />
+                  <path d="M9 13.5L7 21l5-3 5 3-2-7.5" />
                 }
                 @case ('logRace') {
                   <circle cx="12" cy="12" r="9" />

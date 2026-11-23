@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { Track } from '../../core/models/domain.models';
+import { Track, TrackCorner } from '../../core/models/domain.models';
 import { TracksService } from '../../core/services/tracks.service';
 import { SessionService } from '../../core/services/session.service';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
@@ -25,6 +25,9 @@ export class TracksComponent implements OnInit {
   editingId: string | null = null;
   name = '';
   country = '';
+  lengthSpaces: number | null = null;
+  laps: number | null = null;
+  corners: TrackCorner[] = [];
 
   async ngOnInit(): Promise<void> {
     await this.reload();
@@ -44,10 +47,24 @@ export class TracksComponent implements OnInit {
     }
   }
 
+  addCorner(): void {
+    this.corners = [
+      ...this.corners,
+      { order: this.corners.length + 1, name: '', maxSpeed: 0 },
+    ];
+  }
+
+  removeCorner(index: number): void {
+    this.corners = this.corners.filter((_, i) => i !== index);
+  }
+
   resetForm(): void {
     this.editingId = null;
     this.name = '';
     this.country = '';
+    this.lengthSpaces = null;
+    this.laps = null;
+    this.corners = [];
   }
 
   startCreate(): void {
@@ -59,6 +76,9 @@ export class TracksComponent implements OnInit {
     this.editingId = track.id;
     this.name = track.name;
     this.country = track.country;
+    this.lengthSpaces = track.lengthSpaces ?? null;
+    this.laps = track.laps ?? null;
+    this.corners = (track.corners ?? []).map((c) => ({ ...c }));
     this.formOpen.set(true);
   }
 
@@ -73,6 +93,16 @@ export class TracksComponent implements OnInit {
       const payload = {
         name: this.name.trim(),
         country: this.country.trim(),
+        lengthSpaces: this.lengthSpaces ? Number(this.lengthSpaces) : undefined,
+        laps: this.laps ? Number(this.laps) : undefined,
+        corners: this.corners
+          .filter((c) => c.name.trim())
+          .map((c, i) => ({
+            order: Number(c.order) || i + 1,
+            name: c.name.trim(),
+            maxSpeed: Number(c.maxSpeed) || 0,
+          }))
+          .sort((a, b) => a.order - b.order),
       };
       if (!payload.name || !payload.country) {
         throw new Error('Name and country are required.');

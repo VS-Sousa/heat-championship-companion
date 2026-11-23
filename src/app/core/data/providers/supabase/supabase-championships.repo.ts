@@ -86,6 +86,8 @@ export class SupabaseChampionshipsRepo implements ChampionshipsRepository {
         use_events: input.useEvents,
         use_press: input.usePress,
         use_sponsorship: input.useSponsorship,
+        association_id: input.associationId ?? null,
+        scoring_system_id: input.scoringSystemId ?? null,
         is_active: true,
       })
       .select('*')
@@ -118,6 +120,8 @@ export class SupabaseChampionshipsRepo implements ChampionshipsRepository {
         use_events: input.useEvents,
         use_press: input.usePress,
         use_sponsorship: input.useSponsorship,
+        association_id: input.associationId ?? null,
+        scoring_system_id: input.scoringSystemId ?? null,
         is_active: input.isActive,
       })
       .eq('id', id)

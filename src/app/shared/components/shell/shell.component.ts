@@ -48,6 +48,25 @@ export class ShellComponent {
     { path: '/drivers', labelKey: 'nav.drivers', icon: 'drivers', hostOnly: false },
     { path: '/cars', labelKey: 'nav.cars', icon: 'cars', hostOnly: false },
     { path: '/tracks', labelKey: 'nav.tracks', icon: 'tracks', hostOnly: false },
+    {
+      path: '/associations',
+      labelKey: 'nav.associations',
+      icon: 'associations',
+      hostOnly: false,
+    },
+    {
+      path: '/scoring-systems',
+      labelKey: 'nav.scoring',
+      icon: 'scoring',
+      hostOnly: false,
+    },
+    {
+      path: '/garage-upgrades',
+      labelKey: 'nav.garage',
+      icon: 'garage',
+      hostOnly: false,
+    },
+    { path: '/badges', labelKey: 'nav.badges', icon: 'badges', hostOnly: false },
     { path: '/log-race', labelKey: 'nav.logRace', icon: 'logRace', hostOnly: true },
   ];
 
@@ -72,7 +91,7 @@ export class ShellComponent {
   }
 
   async disconnect(): Promise<void> {
-    if (this.session.isPreview()) {
+    if (this.session.isPreview() || this.session.isLocal()) {
       setStorageModeOverride(null);
       this.session.clear();
       const base = document.querySelector('base')?.href ?? '/';

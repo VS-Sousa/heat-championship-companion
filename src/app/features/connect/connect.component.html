@@ -23,6 +23,35 @@
       </a>
     </div>
 
+    <div class="mb-4 grid grid-cols-2 gap-2">
+      <button
+        type="button"
+        class="rounded-sm border px-3 py-2 text-xs uppercase tracking-[0.16em] transition sm:text-sm"
+        [ngClass]="
+          backend === 'supabase'
+            ? 'border-heat-yellow bg-heat-yellow/15 text-heat-yellow'
+            : 'text-heat-muted'
+        "
+        [style.border-color]="backend === 'supabase' ? undefined : 'var(--heat-border)'"
+        (click)="selectBackend('supabase')"
+      >
+        {{ 'connect.backendSupabase' | t }}
+      </button>
+      <button
+        type="button"
+        class="rounded-sm border px-3 py-2 text-xs uppercase tracking-[0.16em] transition sm:text-sm"
+        [ngClass]="
+          backend === 'local'
+            ? 'border-heat-yellow bg-heat-yellow/15 text-heat-yellow'
+            : 'text-heat-muted'
+        "
+        [style.border-color]="backend === 'local' ? undefined : 'var(--heat-border)'"
+        (click)="selectBackend('local')"
+      >
+        {{ 'connect.backendLocal' | t }}
+      </button>
+    </div>
+
     <div class="mb-6 grid grid-cols-2 gap-2">
       <button
         type="button"
@@ -53,58 +82,99 @@
     </div>
 
     <form class="space-y-4" (ngSubmit)="submit()">
-      <div>
-        <label class="heat-label" for="url">{{ 'connect.url' | t }}</label>
-        <input
-          id="url"
-          class="heat-input font-mono text-sm"
-          name="url"
-          [(ngModel)]="url"
-          placeholder="https://xxxx.supabase.co"
-          autocomplete="off"
-        />
-      </div>
-
-      <div>
-        <label class="heat-label" for="publishableKey">
-          {{ 'connect.publishableKey' | t }}
-        </label>
-        <input
-          id="publishableKey"
-          class="heat-input font-mono text-sm"
-          name="publishableKey"
-          [(ngModel)]="publishableKey"
-          placeholder="sb_publishable_..."
-          autocomplete="off"
-        />
-        <p class="mt-1 text-[11px] leading-snug text-heat-muted">
-          {{ 'connect.publishableHint' | t }}
-        </p>
-      </div>
-
-      @if (mode === 'host') {
+      @if (backend === 'supabase') {
         <div>
-          <label class="heat-label" for="email">{{ 'connect.email' | t }}</label>
+          <label class="heat-label" for="url">{{ 'connect.url' | t }}</label>
           <input
-            id="email"
-            class="heat-input"
-            name="email"
-            type="email"
-            [(ngModel)]="email"
-            autocomplete="username"
+            id="url"
+            class="heat-input font-mono text-sm"
+            name="url"
+            [(ngModel)]="url"
+            placeholder="https://xxxx.supabase.co"
+            autocomplete="off"
           />
         </div>
+
         <div>
-          <label class="heat-label" for="password">{{ 'connect.password' | t }}</label>
+          <label class="heat-label" for="publishableKey">
+            {{ 'connect.publishableKey' | t }}
+          </label>
           <input
-            id="password"
-            class="heat-input"
-            name="password"
-            type="password"
-            [(ngModel)]="password"
-            autocomplete="current-password"
+            id="publishableKey"
+            class="heat-input font-mono text-sm"
+            name="publishableKey"
+            [(ngModel)]="publishableKey"
+            placeholder="sb_publishable_..."
+            autocomplete="off"
           />
+          <p class="mt-1 text-[11px] leading-snug text-heat-muted">
+            {{ 'connect.publishableHint' | t }}
+          </p>
         </div>
+
+        @if (mode === 'host') {
+          <div>
+            <label class="heat-label" for="email">{{ 'connect.email' | t }}</label>
+            <input
+              id="email"
+              class="heat-input"
+              name="email"
+              type="email"
+              [(ngModel)]="email"
+              autocomplete="username"
+            />
+          </div>
+          <div>
+            <label class="heat-label" for="password">{{ 'connect.password' | t }}</label>
+            <input
+              id="password"
+              class="heat-input"
+              name="password"
+              type="password"
+              [(ngModel)]="password"
+              autocomplete="current-password"
+            />
+          </div>
+        }
+      } @else {
+        <div>
+          <label class="heat-label" for="apiBaseUrl">{{ 'connect.apiBaseUrl' | t }}</label>
+          <input
+            id="apiBaseUrl"
+            class="heat-input font-mono text-sm"
+            name="apiBaseUrl"
+            [(ngModel)]="apiBaseUrl"
+            placeholder="http://localhost:3000"
+            autocomplete="off"
+          />
+          <p class="mt-1 text-[11px] leading-snug text-heat-muted">
+            {{ 'connect.localHint' | t }}
+          </p>
+        </div>
+
+        @if (mode === 'host') {
+          <div>
+            <label class="heat-label" for="username">{{ 'connect.username' | t }}</label>
+            <input
+              id="username"
+              class="heat-input"
+              name="username"
+              [(ngModel)]="username"
+              autocomplete="username"
+            />
+          </div>
+          <div>
+            <label class="heat-label" for="localPassword">{{ 'connect.password' | t }}</label>
+            <input
+              id="localPassword"
+              class="heat-input"
+              name="password"
+              type="password"
+              [(ngModel)]="password"
+              autocomplete="current-password"
+            />
+          </div>
+        }
       }
 
       @if (error()) {

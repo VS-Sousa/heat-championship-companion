@@ -7,10 +7,17 @@ export interface SupabaseConfig {
   publishableKey: string;
 }
 
+export interface LocalAuthSession {
+  apiBaseUrl: string;
+  token: string;
+}
+
 export interface UserSession {
   /** Active data backend; defaults to supabase for legacy sessions. */
   storageMode?: StorageMode;
   config: SupabaseConfig;
+  /** Present when storageMode is `local`. */
+  localAuth?: LocalAuthSession;
   user: {
     id: string;
     username: string;
@@ -25,6 +32,12 @@ export const PREVIEW_SESSION_CONFIG: SupabaseConfig = {
   publishableKey: 'preview',
 };
 
+/** Placeholder config stored for local API sessions. */
+export const LOCAL_SESSION_CONFIG: SupabaseConfig = {
+  url: 'local://api',
+  publishableKey: 'local',
+};
+
 // --- Domain Models ---
 export interface Car {
   id: string;
@@ -32,6 +45,38 @@ export interface Car {
   /** Named color key (red, blue, …) — unique across cars. */
   colorKey: string;
   colorHex: string;
+}
+
+export interface Association {
+  id: string;
+  name: string;
+  abbreviation: string;
+}
+
+export interface ScoringSystem {
+  id: string;
+  name: string;
+  points: number[];
+  bonusFastestLap: number;
+  bonusPole: number;
+  bonusDriverOfDay: number;
+  isBuiltin: boolean;
+}
+
+export type GarageUpgradeCategory =
+  | 'engine'
+  | 'suspension'
+  | 'brakes'
+  | 'tires'
+  | 'cooling'
+  | 'other';
+
+export interface GarageUpgrade {
+  id: string;
+  name: string;
+  category: GarageUpgradeCategory;
+  heatCost: number;
+  effect: string;
 }
 
 export interface Driver {
@@ -47,10 +92,19 @@ export interface Driver {
   userId?: string;
 }
 
+export interface TrackCorner {
+  order: number;
+  name: string;
+  maxSpeed: number;
+}
+
 export interface Track {
   id: string;
   name: string;
   country: string;
+  lengthSpaces?: number;
+  laps?: number;
+  corners?: TrackCorner[];
 }
 
 export interface Championship {
@@ -66,9 +120,40 @@ export interface Championship {
   useSponsorship: boolean;
   isActive: boolean;
   finishedAt?: string;
+  associationId?: string;
+  scoringSystemId?: string;
 }
 
-export type RaceStatus = 'planned' | 'completed' | 'cancelled';
+export type RaceStage = 'pre_race' | 'in_race' | 'post_race';
+export type RaceStatus =
+  | 'planned'
+  | 'pre_race'
+  | 'in_race'
+  | 'post_race'
+  | 'completed'
+  | 'cancelled';
+
+export type TelemetryEventType =
+  | 'fastest_turn'
+  | 'slipstream_overtake'
+  | 'corner_speed_ok'
+  | 'corner_spin';
+
+export interface TelemetryEvent {
+  id: string;
+  driverId: string;
+  type: TelemetryEventType;
+  cornerOrder?: number;
+  note?: string;
+  createdAt?: string;
+}
+
+export interface RaceEntry {
+  driverId: string;
+  carId: string;
+  gridPosition: number;
+  loadout: string[];
+}
 
 export interface Race {
   id: string;
@@ -81,6 +166,14 @@ export interface Race {
   trackCondition?: string;
   racedAt?: string;
   createdAt?: string;
+  name?: string;
+  abbreviation?: string;
+  associationId?: string;
+  scoringSystemId?: string;
+  reverseDirection?: boolean;
+  stage?: RaceStage;
+  telemetry?: TelemetryEvent[];
+  entries?: RaceEntry[];
 }
 
 export interface RaceResult {
@@ -92,6 +185,9 @@ export interface RaceResult {
   position: number;
   pointsAwarded: number;
   dnf: boolean;
+  gapTurns?: number;
+  driverOfTheDay?: boolean;
+  loadout?: string[];
 }
 
 export interface RaceResultPayload {
@@ -101,6 +197,57 @@ export interface RaceResultPayload {
   position: number;
   pointsAwarded: number;
   dnf: boolean;
+  gapTurns?: number;
+  driverOfTheDay?: boolean;
+  loadout?: string[];
+}
+
+export interface BadgeDefinition {
+  id: string;
+  name: string;
+  description: string;
+  metric: string;
+}
+
+export interface BadgeAward {
+  id: string;
+  badgeId: string;
+  driverId: string;
+  raceId?: string;
+  associationId?: string;
+  awardedAt: string;
+}
+
+export interface SavePreRaceRequest {
+  raceId?: string;
+  championshipId?: string;
+  associationId?: string;
+  trackId: string;
+  reverseDirection: boolean;
+  name: string;
+  abbreviation: string;
+  scoringSystemId?: string;
+  weatherCondition?: string;
+  trackCondition?: string;
+  racedAt?: string;
+  useGarage: boolean;
+  entries: RaceEntry[];
+}
+
+export interface SaveTelemetryRequest {
+  raceId: string;
+  telemetry: TelemetryEvent[];
+}
+
+export interface CompletePostRaceRequest {
+  raceId: string;
+  results: Array<
+    RaceResultPayload & {
+      gapTurns: number;
+      driverOfTheDay: boolean;
+      loadout?: string[];
+    }
+  >;
 }
 
 export interface PlannedRoundInput {
@@ -111,6 +258,8 @@ export interface PlannedRoundInput {
 export interface CreateChampionshipRequest {
   name: string;
   season: string;
+  associationId?: string;
+  scoringSystemId?: string;
   pointSystem: number[];
   useGarage: boolean;
   useEvents: boolean;

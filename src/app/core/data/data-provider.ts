@@ -1,13 +1,18 @@
 import {
+  Association,
+  BadgeAward,
+  BadgeDefinition,
   BreakdownStatRow,
   Car,
   CarStatRow,
   Championship,
   ChampionshipProgression,
   CompletePlannedRaceRequest,
+  CompletePostRaceRequest,
   CreateChampionshipRequest,
   Driver,
   DriverStatRow,
+  GarageUpgrade,
   GlobalChampionRow,
   HeadToHeadRow,
   LogStandaloneRaceRequest,
@@ -15,6 +20,9 @@ import {
   Race,
   RaceResult,
   ResultHistoryRow,
+  SavePreRaceRequest,
+  SaveTelemetryRequest,
+  ScoringSystem,
   SeriesChampionRow,
   StandingRow,
   TitleWin,
@@ -45,6 +53,46 @@ export interface TracksRepository {
   create(input: Omit<Track, 'id'>): Promise<Track>;
   update(id: string, input: Omit<Track, 'id'>): Promise<Track>;
   remove(id: string): Promise<void>;
+}
+
+export interface AssociationsRepository {
+  list(): Promise<Association[]>;
+  getById(id: string): Promise<Association | null>;
+  create(input: Omit<Association, 'id'>): Promise<Association>;
+  update(id: string, input: Omit<Association, 'id'>): Promise<Association>;
+  remove(id: string): Promise<void>;
+  listMemberIds(associationId: string): Promise<string[]>;
+  setMembers(associationId: string, driverIds: string[]): Promise<void>;
+}
+
+export interface ScoringSystemsRepository {
+  list(): Promise<ScoringSystem[]>;
+  getById(id: string): Promise<ScoringSystem | null>;
+  create(
+    input: Omit<ScoringSystem, 'id' | 'isBuiltin'>
+  ): Promise<ScoringSystem>;
+  update(
+    id: string,
+    input: Omit<ScoringSystem, 'id' | 'isBuiltin'>
+  ): Promise<ScoringSystem>;
+  remove(id: string): Promise<void>;
+}
+
+export interface GarageUpgradesRepository {
+  list(): Promise<GarageUpgrade[]>;
+  getById(id: string): Promise<GarageUpgrade | null>;
+  create(input: Omit<GarageUpgrade, 'id'>): Promise<GarageUpgrade>;
+  update(id: string, input: Omit<GarageUpgrade, 'id'>): Promise<GarageUpgrade>;
+  remove(id: string): Promise<void>;
+}
+
+export interface BadgesRepository {
+  listDefinitions(): Promise<BadgeDefinition[]>;
+  listAwards(filters?: {
+    driverId?: string;
+    raceId?: string;
+    associationId?: string;
+  }): Promise<BadgeAward[]>;
 }
 
 export type ChampionshipUpdateInput = Omit<
@@ -93,6 +141,16 @@ export interface RacesRepository {
   completePlannedRace(request: CompletePlannedRaceRequest): Promise<Race>;
   logStandaloneRace(request: LogStandaloneRaceRequest): Promise<Race>;
   cancelRace(raceId: string): Promise<Race>;
+  /** Stage 1: persist setup/grid and move race to pre_race (or create standalone). */
+  savePreRace(request: SavePreRaceRequest): Promise<Race>;
+  /** Advance pre_race → in_race. */
+  startLive(raceId: string): Promise<Race>;
+  /** Stage 2: persist live telemetry events. */
+  saveTelemetry(request: SaveTelemetryRequest): Promise<Race>;
+  /** Advance in_race → post_race. */
+  openPodium(raceId: string): Promise<Race>;
+  /** Stage 3: final results + badges, mark completed. */
+  completePostRace(request: CompletePostRaceRequest): Promise<Race>;
   getDriverStats(): Promise<DriverStatRow[]>;
   getCarStats(): Promise<CarStatRow[]>;
   getDriverResultHistory(driverId: string): Promise<ResultHistoryRow[]>;
@@ -126,6 +184,10 @@ export interface DataProvider {
   readonly cars: CarsRepository;
   readonly drivers: DriversRepository;
   readonly tracks: TracksRepository;
+  readonly associations: AssociationsRepository;
+  readonly scoringSystems: ScoringSystemsRepository;
+  readonly garageUpgrades: GarageUpgradesRepository;
+  readonly badges: BadgesRepository;
   readonly championships: ChampionshipsRepository;
   readonly races: RacesRepository;
   /** Preview-only: wipe demo state and reseed. No-op elsewhere. */

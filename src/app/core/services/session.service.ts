@@ -1,5 +1,6 @@
 import { Injectable, signal, computed } from '@angular/core';
 import {
+  LOCAL_SESSION_CONFIG,
   PREVIEW_SESSION_CONFIG,
   SupabaseConfig,
   UserSession,
@@ -33,6 +34,7 @@ export class SessionService {
     return this.sessionSignal()?.storageMode ?? resolveStorageMode();
   });
   readonly isPreview = computed(() => this.storageMode() === 'preview');
+  readonly isLocal = computed(() => this.storageMode() === 'local');
 
   constructor() {
     this.restore();
@@ -56,6 +58,13 @@ export class SessionService {
 
       const normalized = this.normalizeSession(parsed);
       if (!normalized.config.publishableKey) {
+        this.clear();
+        return null;
+      }
+      if (
+        normalized.storageMode === 'local' &&
+        (!normalized.localAuth?.apiBaseUrl || !normalized.localAuth?.token)
+      ) {
         this.clear();
         return null;
       }
@@ -114,6 +123,26 @@ export class SessionService {
     return session;
   }
 
+  saveLocal(
+    apiBaseUrl: string,
+    token: string,
+    user: UserSession['user']
+  ): UserSession {
+    setStorageModeOverride('local');
+    const session: UserSession = {
+      storageMode: 'local',
+      config: LOCAL_SESSION_CONFIG,
+      localAuth: {
+        apiBaseUrl: apiBaseUrl.replace(/\/$/, ''),
+        token,
+      },
+      user,
+      expiresAt: Date.now() + SESSION_MS,
+    };
+    this.persist(session);
+    return session;
+  }
+
   clear(): void {
     localStorage.removeItem(STORAGE_KEY);
     this.sessionSignal.set(null);
@@ -126,9 +155,13 @@ export class SessionService {
       session.config.publishableKey?.trim() ||
       session.config.anonKey?.trim() ||
       '';
-    const storageMode: StorageMode =
+    let storageMode: StorageMode =
       session.storageMode ??
-      (session.config.url?.startsWith('preview://') ? 'preview' : 'supabase');
+      (session.config.url?.startsWith('preview://')
+        ? 'preview'
+        : session.config.url?.startsWith('local://')
+          ? 'local'
+          : 'supabase');
     return {
       ...session,
       storageMode,

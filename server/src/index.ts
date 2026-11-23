@@ -1,0 +1,45 @@
+import cors from 'cors';
+import express, { type NextFunction, type Request, type Response } from 'express';
+import { ZodError } from 'zod';
+import { db } from './db.js';
+import { authenticate } from './middleware/auth.js';
+import { authRouter } from './routes/auth.js';
+import { carsRouter } from './routes/cars.js';
+import { championshipsRouter } from './routes/championships.js';
+import { driversRouter } from './routes/drivers.js';
+import { racesRouter } from './routes/races.js';
+import { tracksRouter } from './routes/tracks.js';
+import { associationsRouter } from './routes/associations.js';
+import { badgesRouter } from './routes/badges.js';
+import { garageUpgradesRouter } from './routes/garage-upgrades.js';
+import { scoringSystemsRouter } from './routes/scoring-systems.js';
+
+const app=express();
+app.use(cors({origin:process.env.CORS_ORIGIN ?? '*'}));
+app.use(express.json());
+app.get('/api/health',(_req,res)=>res.json({ok:true}));
+app.use('/api/auth',authRouter);
+app.use('/api',authenticate);
+app.use('/api/cars',carsRouter);
+app.use('/api/drivers',driversRouter);
+app.use('/api/tracks',tracksRouter);
+app.use('/api/associations',associationsRouter);
+app.use('/api/scoring-systems',scoringSystemsRouter);
+app.use('/api/garage-upgrades',garageUpgradesRouter);
+app.use('/api/badges',badgesRouter);
+app.use('/api/championships',championshipsRouter);
+app.use('/api/races',racesRouter);
+app.use((_req,res)=>res.status(404).json({error:'Route not found.'}));
+app.use((error:unknown,_req:Request,res:Response,_next:NextFunction)=>{
+  console.error(error);
+  if(error instanceof ZodError)return res.status(400).json({error:'Invalid request.',issues:error.issues});
+  const e=error as {status?:number;code?:string;message?:string};
+  if(e.code==='23505')return res.status(409).json({error:'A unique value is already in use.'});
+  if(e.code==='23503'||e.code==='22P02')return res.status(400).json({error:'Invalid related id.'});
+  return res.status(e.status??500).json({error:e.status?e.message:'Internal server error.'});
+});
+
+const port=Number(process.env.PORT??3000);
+const server=app.listen(port,()=>console.log(`Heat API listening on http://localhost:${port}`));
+const shutdown=()=>server.close(()=>db.end().finally(()=>process.exit(0)));
+process.on('SIGTERM',shutdown);process.on('SIGINT',shutdown);

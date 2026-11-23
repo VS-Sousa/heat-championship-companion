@@ -73,6 +73,8 @@ export class PreviewChampionshipsRepo implements ChampionshipsRepository {
       useEvents: input.useEvents,
       usePress: input.usePress,
       useSponsorship: input.useSponsorship,
+      associationId: input.associationId,
+      scoringSystemId: input.scoringSystemId,
       isActive: true,
     };
     this.store.update((draft) => {
@@ -104,6 +106,8 @@ export class PreviewChampionshipsRepo implements ChampionshipsRepository {
         useEvents: input.useEvents,
         usePress: input.usePress,
         useSponsorship: input.useSponsorship,
+        associationId: input.associationId,
+        scoringSystemId: input.scoringSystemId,
         isActive: input.isActive,
       };
       draft.championships[index] = updated;

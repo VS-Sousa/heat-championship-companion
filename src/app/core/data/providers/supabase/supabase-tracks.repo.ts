@@ -31,7 +31,13 @@ export class SupabaseTracksRepo implements TracksRepository {
     const { data, error } = await this.supabase
       .getClient()
       .from('tracks')
-      .insert({ name: input.name, country: input.country })
+      .insert({
+        name: input.name,
+        country: input.country,
+        length_spaces: input.lengthSpaces ?? null,
+        laps: input.laps ?? null,
+        corners: input.corners ?? [],
+      })
       .select('*')
       .single();
     if (error) throw new Error(error.message);
@@ -42,7 +48,13 @@ export class SupabaseTracksRepo implements TracksRepository {
     const { data, error } = await this.supabase
       .getClient()
       .from('tracks')
-      .update({ name: input.name, country: input.country })
+      .update({
+        name: input.name,
+        country: input.country,
+        length_spaces: input.lengthSpaces ?? null,
+        laps: input.laps ?? null,
+        corners: input.corners ?? [],
+      })
       .eq('id', id)
       .select('*')
       .single();

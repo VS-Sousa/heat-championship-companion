@@ -2,11 +2,14 @@ import {
   BreakdownStatRow,
   CarStatRow,
   CompletePlannedRaceRequest,
+  CompletePostRaceRequest,
   DriverStatRow,
   HeadToHeadRow,
   LogStandaloneRaceRequest,
   Race,
   RaceResult,
+  SavePreRaceRequest,
+  SaveTelemetryRequest,
   ResultHistoryRow,
   TrackDriverHistoryRow,
 } from '../../../models/domain.models';
@@ -18,6 +21,7 @@ import {
   pointsForPosition as calculatePointsForPosition,
   validateResults as validateRaceResults,
 } from '../../shared/race-rules';
+import { evaluateRaceBadges } from '../../shared/badge-evaluator';
 
 export class SupabaseRacesRepo implements RacesRepository {
   constructor(
@@ -125,6 +129,47 @@ export class SupabaseRacesRepo implements RacesRepository {
       .single();
     if (error) throw new Error(error.message);
     return mapRace(data as Record<string, unknown>);
+  }
+
+  async savePreRace(request: SavePreRaceRequest): Promise<Race> {
+    const row = {
+      championship_id: request.championshipId ?? null, association_id: request.associationId ?? null,
+      track_id: request.trackId, name: request.name, abbreviation: request.abbreviation,
+      scoring_system_id: request.scoringSystemId ?? null, reverse_direction: request.reverseDirection,
+      weather_condition: request.weatherCondition ?? null, track_condition: request.trackCondition ?? null,
+      raced_at: request.racedAt ?? null, entries: request.entries, status: 'pre_race', stage: 'pre_race',
+      race_type: request.championshipId ? 'championship' : 'standalone',
+    };
+    const table = this.supabase.getClient().from('races');
+    const query = request.raceId ? table.update(row).eq('id', request.raceId).in('status', ['planned', 'pre_race']) : table.insert(row);
+    const { data, error } = await query.select('*').single();
+    if (error) throw new Error(error.message);
+    return mapRace(data as Record<string, unknown>);
+  }
+  async startLive(raceId: string): Promise<Race> { return this.setStage(raceId, 'in_race'); }
+  async saveTelemetry(request: SaveTelemetryRequest): Promise<Race> {
+    const { data, error } = await this.supabase.getClient().from('races').update({ telemetry: request.telemetry }).eq('id', request.raceId).select('*').single();
+    if (error) throw new Error(error.message); return mapRace(data as Record<string, unknown>);
+  }
+  async openPodium(raceId: string): Promise<Race> { return this.setStage(raceId, 'post_race'); }
+  async completePostRace(request: CompletePostRaceRequest): Promise<Race> {
+    this.validateResults(request.results);
+    const client = this.supabase.getClient();
+    const current = await this.getRace(request.raceId); if (!current) throw new Error('Race not found.');
+    await client.from('race_results').delete().eq('race_id', request.raceId);
+    await this.insertResults(request.raceId, request.results);
+    const awards = evaluateRaceBadges({ raceId: request.raceId, associationId: current.associationId, telemetry: current.telemetry ?? [], newId: () => crypto.randomUUID() });
+    await client.from('badge_awards').delete().eq('race_id', request.raceId);
+    if (awards.length) {
+      const { error } = await client.from('badge_awards').insert(awards.map((x) => ({ id: x.id, badge_id: x.badgeId, driver_id: x.driverId, race_id: x.raceId, association_id: x.associationId, awarded_at: x.awardedAt })));
+      if (error) throw new Error(error.message);
+    }
+    const { data, error } = await client.from('races').update({ status: 'completed', stage: 'post_race' }).eq('id', request.raceId).select('*').single();
+    if (error) throw new Error(error.message); return mapRace(data as Record<string, unknown>);
+  }
+  private async setStage(raceId: string, stage: 'in_race' | 'post_race'): Promise<Race> {
+    const { data, error } = await this.supabase.getClient().from('races').update({ status: stage, stage }).eq('id', raceId).select('*').single();
+    if (error) throw new Error(error.message); return mapRace(data as Record<string, unknown>);
   }
 
   async getDriverStats(): Promise<DriverStatRow[]> {
@@ -372,6 +417,9 @@ export class SupabaseRacesRepo implements RacesRepository {
       position: result.position,
       points_awarded: result.pointsAwarded,
       dnf: result.dnf,
+      gap_turns: result.gapTurns ?? null,
+      driver_of_the_day: result.driverOfTheDay ?? false,
+      loadout: result.loadout ?? [],
     }));
     const { error } = await this.supabase
       .getClient()

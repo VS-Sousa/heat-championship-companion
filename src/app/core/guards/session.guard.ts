@@ -12,8 +12,11 @@ function sessionIsReady(
   if (!restored) return false;
 
   const mode = restored.storageMode ?? resolveStorageMode();
-  if (mode === 'preview' || mode === 'local') {
-    return true;
+  if (mode === 'preview') return true;
+  if (mode === 'local') {
+    return Boolean(
+      restored.localAuth?.apiBaseUrl && restored.localAuth?.token
+    );
   }
   return supabase.isReady();
 }

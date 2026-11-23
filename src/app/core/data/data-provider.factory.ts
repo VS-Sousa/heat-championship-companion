@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { environment } from '../../../environments/environment';
+import { SessionService } from '../services/session.service';
 import { SupabaseService } from '../services/supabase.service';
 import { DataProvider } from './data-provider';
 import { LocalApiDataProvider } from './providers/local/local-api-data.provider';
@@ -16,7 +16,7 @@ export function createDataProvider(): DataProvider {
     case 'local':
       return new LocalApiDataProvider(
         inject(HttpClient),
-        environment.apiBaseUrl
+        inject(SessionService)
       );
     case 'supabase':
     default:

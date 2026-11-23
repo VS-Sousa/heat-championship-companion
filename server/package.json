@@ -1,9 +1,27 @@
 {
   "name": "heat-championship-api",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
-  "description": "Placeholder for the future local API. Not built or deployed with GitHub Pages.",
+  "type": "module",
+  "description": "Local REST API for Heat Championship Companion",
   "scripts": {
-    "start": "node -e \"console.log('Local API not implemented yet. See server/README.md.')\""
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "pg": "^8.16.3",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.5",
+    "@types/node": "^24.10.1",
+    "@types/pg": "^8.15.6",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
   }
 }

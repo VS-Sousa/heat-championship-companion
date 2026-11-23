@@ -1,0 +1,66 @@
+<div class="heat-page-header">
+  <div class="min-w-0">
+    <p class="heat-subtitle">{{ 'badges.eyebrow' | t }}</p>
+    <h1 class="heat-title">{{ 'badges.title' | t }}</h1>
+  </div>
+</div>
+
+@if (error()) {
+  <div class="mb-4 rounded-sm border border-heat-red/40 bg-heat-red/10 px-4 py-3">{{ error() }}</div>
+}
+
+@if (loading()) {
+  <p class="text-heat-muted">{{ 'badges.loading' | t }}</p>
+} @else {
+  <section class="heat-panel mb-6 p-4 sm:p-5">
+    <h2 class="mb-4 font-display text-2xl tracking-wider">{{ 'badges.definitions' | t }}</h2>
+    <div class="grid gap-3 sm:grid-cols-2">
+      @for (def of definitions(); track def.id) {
+        <article class="rounded-sm border border-heat-border bg-heat-steel/40 p-3">
+          <div class="flex items-start justify-between gap-2">
+            <p class="font-display text-lg tracking-wider">{{ def.name }}</p>
+            <span class="font-mono text-sm text-heat-yellow">×{{ awardCount(def.id) }}</span>
+          </div>
+          <p class="mt-1 text-sm text-heat-muted">{{ def.description }}</p>
+          <p class="mt-2 font-mono text-[10px] uppercase tracking-widest text-heat-muted">
+            {{ def.metric }}
+          </p>
+        </article>
+      } @empty {
+        <p class="text-heat-muted">{{ 'badges.noDefinitions' | t }}</p>
+      }
+    </div>
+  </section>
+
+  <section class="heat-panel p-4 sm:p-5">
+    <h2 class="mb-4 font-display text-2xl tracking-wider">{{ 'badges.awards' | t }}</h2>
+    @if (!awards().length) {
+      <p class="text-heat-muted">{{ 'badges.noAwards' | t }}</p>
+    } @else {
+      <div class="heat-scroll">
+        <table class="w-full min-w-[420px] text-left text-sm">
+          <thead class="text-xs uppercase tracking-widest text-heat-yellow">
+            <tr>
+              <th class="py-2">{{ 'badges.badge' | t }}</th>
+              <th class="py-2">{{ 'badges.driver' | t }}</th>
+              <th class="py-2">{{ 'badges.date' | t }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (award of awards(); track award.id) {
+              <tr class="border-b border-heat-border">
+                <td class="py-2">{{ badgeName(award.badgeId) }}</td>
+                <td class="py-2">
+                  <a [routerLink]="['/drivers', award.driverId]" class="hover:text-heat-yellow">
+                    {{ driverName(award.driverId) }}
+                  </a>
+                </td>
+                <td class="py-2 font-mono">{{ award.awardedAt.slice(0, 10) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+}

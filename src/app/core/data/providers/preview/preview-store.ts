@@ -1,5 +1,10 @@
 import {
+  Association,
+  BadgeAward,
+  BadgeDefinition,
   Car,
+  GarageUpgrade,
+  ScoringSystem,
   Championship,
   Driver,
   Race,
@@ -11,6 +16,12 @@ import { createPreviewSeed } from './preview-seed';
 export const PREVIEW_DB_KEY = 'heat_preview_db';
 
 export interface PreviewDb {
+  associations: Association[];
+  associationMembers: Array<{ associationId: string; driverId: string }>;
+  scoringSystems: ScoringSystem[];
+  garageUpgrades: GarageUpgrade[];
+  badgeDefinitions: BadgeDefinition[];
+  badgeAwards: BadgeAward[];
   cars: Car[];
   drivers: Driver[];
   tracks: Track[];
@@ -62,7 +73,15 @@ export class PreviewStore {
       ) {
         return null;
       }
-      return parsed;
+      return {
+        ...parsed,
+        associations: parsed.associations ?? [],
+        associationMembers: parsed.associationMembers ?? [],
+        scoringSystems: parsed.scoringSystems ?? [],
+        garageUpgrades: parsed.garageUpgrades ?? [],
+        badgeDefinitions: parsed.badgeDefinitions ?? [],
+        badgeAwards: parsed.badgeAwards ?? [],
+      };
     } catch {
       return null;
     }

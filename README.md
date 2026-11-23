@@ -4,11 +4,13 @@ SPA Angular para ligas de *Heat: Pedal to the Metal* — **BYOS** (Bring Your Ow
 
 ## Funcionalidades
 
-- Landing + acesso Visitante / Host
-- Classificação com diff, luta pelo título e gráfico de pontos por etapa (cor do carro mais usado)
-- Calendário em lista ou matriz de chegadas; modal com piloto, carro, grid e posição
+- Landing + acesso Visitante / Host / Demo / Servidor local
+- Associações (ligas sociais), sistemas de pontuação e melhorias de garagem
+- Pistas com curvas ordenadas e velocidades máximas (sentido reverso na corrida)
+- Fluxo de corrida em 3 etapas: Setup/Grid → Telemetria ao vivo → Pódio
+- Badges automáticos a partir da telemetria (vácuo, pé de chumbo, etc.)
+- Classificação com diff, luta pelo título e gráfico de pontos por etapa
 - CRUD de carros, pilotos (Lendas), pistas e campeonatos (séries / edições)
-- Registrar corrida (campeonato ou avulsa), sorteio de pista e de grid
 - Hall da série, finalização de campeonato
 - UI pt-BR / EN e temas claro / escuro inspirados nos manuais
 
@@ -39,9 +41,26 @@ npm start
 
 Abra `http://localhost:4200`.
 
-A SPA usa um `DataProvider` (`supabase` | `preview` | `local`). O default é **BYOS Supabase**; na landing dá para **Experimentar demo** (`preview`, dados em memória/`localStorage`). O modo `local` aponta para a API em [`server/`](server/) (ainda stub).
+A SPA usa um `DataProvider` (`supabase` | `preview` | `local`):
 
-O monorepo mantém o frontend Angular na raiz e reserva `server/` + [`docker-compose.yml`](docker-compose.yml) para o backend local futuro. **GitHub Pages publica só o build estático do Angular** — nada de `server/` entra no artefato.
+| Modo | Como entrar | Dados |
+| --- | --- | --- |
+| `supabase` | **Acessar a liga** (BYOS) | Seu projeto Supabase |
+| `preview` | **Experimentar demo** | Seed em memória / `localStorage` |
+| `local` | **Servidor local** | API em [`server/`](server/) + Postgres via Docker |
+
+```bash
+# terminal 1 — API + Postgres
+docker compose up --build
+
+# terminal 2 — SPA
+npm install
+npm start
+```
+
+Na landing → **Servidor local** → Host `host` / `host` (API em `http://localhost:3000`).
+
+O monorepo mantém o Angular na raiz e a API em `server/`. **GitHub Pages publica só o build estático do Angular** — nada de `server/` entra no artefato.
 
 ### Build & deploy (GitHub Pages)
 
@@ -75,6 +94,6 @@ Visitantes conectam com a mesma URL/chave e só consultam painel, classificaçã
 ## Stack
 
 - Angular 19 + Tailwind CSS
-- Supabase (PostgreSQL + Auth + RLS)
+- DataProvider: Supabase BYOS · Preview mock · Local API (Express + PostgreSQL)
 - Hash routing (GitHub Pages)
 - pt-BR / EN + temas claro / escuro

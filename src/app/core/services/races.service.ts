@@ -4,11 +4,14 @@ import {
   BreakdownStatRow,
   CarStatRow,
   CompletePlannedRaceRequest,
+  CompletePostRaceRequest,
   DriverStatRow,
   HeadToHeadRow,
   LogStandaloneRaceRequest,
   Race,
   RaceResult,
+  SavePreRaceRequest,
+  SaveTelemetryRequest,
   ResultHistoryRow,
   TrackDriverHistoryRow,
 } from '../models/domain.models';
@@ -42,6 +45,11 @@ export class RacesService {
   cancelRace(raceId: string): Promise<Race> {
     return this.provider.races.cancelRace(raceId);
   }
+  savePreRace(request: SavePreRaceRequest): Promise<Race> { return this.provider.races.savePreRace(request); }
+  startLive(raceId: string): Promise<Race> { return this.provider.races.startLive(raceId); }
+  saveTelemetry(request: SaveTelemetryRequest): Promise<Race> { return this.provider.races.saveTelemetry(request); }
+  openPodium(raceId: string): Promise<Race> { return this.provider.races.openPodium(raceId); }
+  completePostRace(request: CompletePostRaceRequest): Promise<Race> { return this.provider.races.completePostRace(request); }
 
   getDriverStats(): Promise<DriverStatRow[]> {
     return this.provider.races.getDriverStats();

@@ -18,8 +18,7 @@ export class PreviewTracksRepo implements TracksRepository {
   async create(input: Omit<Track, 'id'>): Promise<Track> {
     const track: Track = {
       id: newId(),
-      name: input.name,
-      country: input.country,
+      ...input,
     };
     this.store.update((draft) => {
       draft.tracks.push(track);
@@ -32,7 +31,7 @@ export class PreviewTracksRepo implements TracksRepository {
     this.store.update((draft) => {
       const idx = draft.tracks.findIndex((t) => t.id === id);
       if (idx < 0) throw new Error('Track not found.');
-      updated = { id, name: input.name, country: input.country };
+      updated = { id, ...input };
       draft.tracks[idx] = updated;
     });
     return updated!;

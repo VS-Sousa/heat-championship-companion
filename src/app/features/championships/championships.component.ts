@@ -1,9 +1,13 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { AssociationsService } from '../../core/services/associations.service';
+import { ScoringSystemsService } from '../../core/services/scoring-systems.service';
 import {
+  Association,
   Championship,
   PlannedRoundInput,
+  ScoringSystem,
   StandingRow,
   Track,
 } from '../../core/models/domain.models';
@@ -39,6 +43,8 @@ interface CalendarDraft {
 export class ChampionshipsComponent implements OnInit {
   private readonly championshipsService = inject(ChampionshipsService);
   private readonly tracksService = inject(TracksService);
+  private readonly associationsService = inject(AssociationsService);
+  private readonly scoringSystemsService = inject(ScoringSystemsService);
   private readonly i18n = inject(I18nService);
   readonly session = inject(SessionService);
 
@@ -81,8 +87,32 @@ export class ChampionshipsComponent implements OnInit {
     ];
   });
 
+  readonly associations = signal<Association[]>([]);
+  readonly scoringSystems = signal<ScoringSystem[]>([]);
+
+  readonly associationOptions = computed(() => {
+    this.i18n.lang();
+    return [
+      { value: '', label: this.i18n.t('championships.noneOption') },
+      ...this.associations().map((a) => ({
+        value: a.id,
+        label: `${a.name} (${a.abbreviation})`,
+      })),
+    ];
+  });
+
+  readonly scoringSystemOptions = computed(() => {
+    this.i18n.lang();
+    return [
+      { value: '', label: this.i18n.t('championships.noneOption') },
+      ...this.scoringSystems().map((s) => ({ value: s.id, label: s.name })),
+    ];
+  });
+
   editingId: string | null = null;
   viewingId: string | null = null;
+  associationId = '';
+  scoringSystemId = '';
   name = '';
   pointSystemText = DEFAULT_POINTS;
   useGarage = false;
@@ -103,12 +133,17 @@ export class ChampionshipsComponent implements OnInit {
     this.loading.set(true);
     this.error.set(null);
     try {
-      const [championships, tracks] = await Promise.all([
-        this.championshipsService.list(),
-        this.tracksService.list(),
-      ]);
+      const [championships, tracks, associations, scoringSystems] =
+        await Promise.all([
+          this.championshipsService.list(),
+          this.tracksService.list(),
+          this.associationsService.list(),
+          this.scoringSystemsService.list(),
+        ]);
       this.championships.set(championships);
       this.tracks.set(tracks);
+      this.associations.set(associations);
+      this.scoringSystems.set(scoringSystems);
     } catch (err) {
       this.error.set(
         err instanceof Error ? err.message : 'Failed to load championships.'
@@ -121,6 +156,8 @@ export class ChampionshipsComponent implements OnInit {
   resetForm(): void {
     this.editingId = null;
     this.name = '';
+    this.associationId = '';
+    this.scoringSystemId = '';
     this.pointSystemText = DEFAULT_POINTS;
     this.useGarage = false;
     this.useEvents = false;
@@ -139,6 +176,8 @@ export class ChampionshipsComponent implements OnInit {
   startEdit(c: Championship): void {
     this.editingId = c.id;
     this.name = c.name;
+    this.associationId = c.associationId ?? '';
+    this.scoringSystemId = c.scoringSystemId ?? '';
     this.pointSystemText = c.pointSystem.join(',');
     this.useGarage = c.useGarage;
     this.useEvents = c.useEvents;
@@ -228,6 +267,8 @@ export class ChampionshipsComponent implements OnInit {
           name: this.name.trim(),
           season,
           pointSystem,
+          associationId: this.associationId || undefined,
+          scoringSystemId: this.scoringSystemId || undefined,
           useGarage: this.useGarage,
           useEvents: this.useEvents,
           usePress: this.usePress,
@@ -243,6 +284,8 @@ export class ChampionshipsComponent implements OnInit {
           name: this.name.trim(),
           season,
           pointSystem,
+          associationId: this.associationId || undefined,
+          scoringSystemId: this.scoringSystemId || undefined,
           useGarage: this.useGarage,
           useEvents: this.useEvents,
           usePress: this.usePress,

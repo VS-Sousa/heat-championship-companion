@@ -23,6 +23,27 @@ const R3 = '66666666-6666-4666-8666-666666666603';
 
 export function createPreviewSeed(): PreviewDb {
   return {
+    associations: [{ id: '88888888-8888-4888-8888-888888888801', name: 'Demo Racing Association', abbreviation: 'DRA' }],
+    associationMembers: [
+      { associationId: '88888888-8888-4888-8888-888888888801', driverId: D_ALO },
+      { associationId: '88888888-8888-4888-8888-888888888801', driverId: D_HAM },
+    ],
+    scoringSystems: [{
+      id: '99999999-9999-4999-8999-999999999901', name: 'Classic 9–6–4',
+      points: [9, 6, 4, 3, 2, 1], bonusFastestLap: 0, bonusPole: 0,
+      bonusDriverOfDay: 0, isBuiltin: true,
+    }],
+    garageUpgrades: [{
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa01', name: 'Performance Tires',
+      category: 'tires', heatCost: 2, effect: 'Improves corner consistency.',
+    }],
+    badgeDefinitions: [
+      { id: 'vacuum_architect', name: 'Vacuum Architect', description: 'Most slipstream overtakes.', metric: 'slipstream_overtakes' },
+      { id: 'lead_foot', name: 'Lead Foot', description: 'Most corners at safe maximum speed.', metric: 'corner_speed_ok' },
+      { id: 'swiss_watch', name: 'Swiss Watch', description: 'Most fastest turns.', metric: 'fastest_turn' },
+      { id: 'russian_roulette', name: 'Russian Roulette', description: 'Most corner spins.', metric: 'corner_spins' },
+    ],
+    badgeAwards: [],
     cars: [
       {
         id: CAR_RED,
@@ -85,7 +106,7 @@ export function createPreviewSeed(): PreviewDb {
       },
     ],
     tracks: [
-      { id: T_USA, name: 'USA', country: 'United States' },
+      { id: T_USA, name: 'USA', country: 'United States', lengthSpaces: 24, laps: 2, corners: [{ order: 1, name: 'Turn 1', maxSpeed: 3 }] },
       { id: T_GBR, name: 'Great Britain', country: 'United Kingdom' },
       { id: T_ITA, name: 'Italy', country: 'Italy' },
     ],

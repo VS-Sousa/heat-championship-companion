@@ -1,0 +1,9 @@
+import { Router } from 'express'; import { z } from 'zod'; import { db } from '../db.js'; import { requireWrite } from '../middleware/auth.js';
+export const scoringSystemsRouter=Router();
+const body=z.object({name:z.string().min(1),points:z.array(z.number()),bonusFastestLap:z.number(),bonusPole:z.number(),bonusDriverOfDay:z.number()});
+const map=(r:any)=>({id:String(r.id),name:r.name,points:r.points,bonusFastestLap:Number(r.bonus_fastest_lap),bonusPole:Number(r.bonus_pole),bonusDriverOfDay:Number(r.bonus_driver_of_the_day),isBuiltin:Boolean(r.is_builtin)});
+scoringSystemsRouter.get('/',async(_q,res)=>res.json((await db.query('select * from scoring_systems order by name')).rows.map(map)));
+scoringSystemsRouter.get('/:id',async(req,res)=>{const r=(await db.query('select * from scoring_systems where id=$1',[req.params.id])).rows[0];return r?res.json(map(r)):res.status(404).json({error:'Scoring system not found.'});});
+scoringSystemsRouter.post('/',requireWrite,async(req,res)=>{const v=body.parse(req.body);const r=(await db.query('insert into scoring_systems(name,points,bonus_fastest_lap,bonus_pole,bonus_driver_of_the_day,is_builtin) values($1,$2,$3,$4,$5,false) returning *',[v.name,JSON.stringify(v.points),v.bonusFastestLap,v.bonusPole,v.bonusDriverOfDay])).rows[0];res.status(201).json(map(r));});
+scoringSystemsRouter.put('/:id',requireWrite,async(req,res)=>{const v=body.parse(req.body);const r=(await db.query('update scoring_systems set name=$1,points=$2,bonus_fastest_lap=$3,bonus_pole=$4,bonus_driver_of_the_day=$5 where id=$6 and not is_builtin returning *',[v.name,JSON.stringify(v.points),v.bonusFastestLap,v.bonusPole,v.bonusDriverOfDay,req.params.id])).rows[0];return r?res.json(map(r)):res.status(404).json({error:'Editable scoring system not found.'});});
+scoringSystemsRouter.delete('/:id',requireWrite,async(req,res)=>{await db.query('delete from scoring_systems where id=$1 and not is_builtin',[req.params.id]);res.status(204).end();});

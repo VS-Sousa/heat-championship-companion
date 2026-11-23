@@ -12,6 +12,34 @@
     <h1 class="heat-title">{{ track()!.name }}</h1>
   </div>
 
+  @if (track()!.lengthSpaces || track()!.laps) {
+    <p class="mb-4 font-mono text-sm text-heat-muted">
+      @if (track()!.lengthSpaces) {
+        {{ 'tracks.lengthSpaces' | t }}: {{ track()!.lengthSpaces }}
+      }
+      @if (track()!.laps) {
+        · {{ 'tracks.laps' | t }}: {{ track()!.laps }}
+      }
+    </p>
+  }
+
+  @if (track()!.corners?.length) {
+    <section class="heat-panel mb-6 p-5">
+      <h2 class="mb-4 font-display text-2xl">{{ 'tracks.corners' | t }}</h2>
+      <ol class="space-y-1 text-sm">
+        @for (corner of track()!.corners!; track corner.order) {
+          <li class="flex justify-between gap-3 border-b border-heat-border/60 py-1">
+            <span>
+              <span class="mr-2 font-mono text-heat-yellow">{{ corner.order }}</span>
+              {{ corner.name }}
+            </span>
+            <span class="font-mono text-heat-muted">{{ corner.maxSpeed }}</span>
+          </li>
+        }
+      </ol>
+    </section>
+  }
+
   <section class="heat-panel p-5">
     <h2 class="mb-4 font-display text-2xl">{{ 'detail.trackDrivers' | t }}</h2>
     <div class="heat-scroll">

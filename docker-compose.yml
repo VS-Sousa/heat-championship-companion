@@ -1,9 +1,7 @@
-# Local stack stub — not used by GitHub Pages.
-# Future: PostgreSQL + server/ API for storageMode=local.
+# Local stack for storageMode=local. Not used by GitHub Pages (SPA-only deploy).
 services:
   db:
     image: postgres:16-alpine
-    profiles: ['local']
     environment:
       POSTGRES_USER: heat
       POSTGRES_PASSWORD: heat
@@ -12,15 +10,17 @@ services:
       - '5432:5432'
     volumes:
       - heat_pg_data:/var/lib/postgresql/data
+      - ./server/sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
 
-  # api:
-  #   build: ./server
-  #   profiles: ['local']
-  #   depends_on: [db]
-  #   ports:
-  #     - '3000:3000'
-  #   environment:
-  #     DATABASE_URL: postgres://heat:heat@db:5432/heat
+  api:
+    build: ./server
+    depends_on: [db]
+    ports:
+      - '3000:3000'
+    environment:
+      DATABASE_URL: postgres://heat:heat@db:5432/heat
+      PORT: '3000'
+      CORS_ORIGIN: '*'
 
 volumes:
   heat_pg_data:
