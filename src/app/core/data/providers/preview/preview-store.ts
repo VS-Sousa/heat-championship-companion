@@ -6,6 +6,7 @@ import {
   GarageUpgrade,
   ScoringSystem,
   Championship,
+  ChampionshipEntry,
   Driver,
   Race,
   RaceResult,
@@ -26,6 +27,9 @@ export interface PreviewDb {
   drivers: Driver[];
   tracks: Track[];
   championships: Championship[];
+  /** championshipId → allowed car ids */
+  championshipCars: Record<string, string[]>;
+  championshipEntries: ChampionshipEntry[];
   races: Race[];
   results: RaceResult[];
 }
@@ -75,10 +79,20 @@ export class PreviewStore {
       }
       return {
         ...parsed,
+        championshipCars: parsed.championshipCars ?? {},
+        championshipEntries: parsed.championshipEntries ?? [],
         associations: parsed.associations ?? [],
         associationMembers: parsed.associationMembers ?? [],
         scoringSystems: parsed.scoringSystems ?? [],
-        garageUpgrades: parsed.garageUpgrades ?? [],
+        garageUpgrades: (parsed.garageUpgrades ?? []).map((u) => {
+          const legacy = u as GarageUpgrade & { effect?: string };
+          return {
+            id: legacy.id,
+            name: legacy.name,
+            description: legacy.description ?? legacy.effect ?? '',
+            set: legacy.set ?? 'basegame',
+          };
+        }),
         badgeDefinitions: parsed.badgeDefinitions ?? [],
         badgeAwards: parsed.badgeAwards ?? [],
       };

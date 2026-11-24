@@ -1,9 +1,7 @@
 export function pointsForPosition(
   pointSystem: number[],
-  position: number,
-  dnf: boolean
+  position: number
 ): number {
-  if (dnf) return 0;
   return pointSystem[position - 1] ?? 0;
 }
 

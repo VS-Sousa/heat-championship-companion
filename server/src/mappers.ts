@@ -9,9 +9,24 @@ export const mapCar = (r: Row) => ({
 });
 export const mapDriver = (r: Row) => ({
   id: String(r.id), name: String(r.name), nickname: optional(r.nickname),
-  abbreviation: String(r.abbreviation), number: Number(r.number),
   isLegend: Boolean(r.is_legend), fixedCarId: optional(r.fixed_car_id),
   favoriteCarId: optional(r.favorite_car_id), userId: optional(r.user_id),
+});
+export const mapAssociation = (r: Row) => ({
+  id: String(r.id), name: String(r.name),
+});
+export const mapChampionshipEntry = (r: Row, garageUpgradeIds: string[] = []) => ({
+  id: String(r.id),
+  championshipId: String(r.championship_id),
+  driverId: String(r.driver_id),
+  carId: String(r.car_id),
+  number: Number(r.number),
+  abbreviation: String(r.abbreviation),
+  garageUpgradeIds,
+});
+export const mapGarageUpgrade = (r: Row) => ({
+  id: String(r.id), name: String(r.name), description: String(r.description ?? ''),
+  set: String(r.set ?? 'basegame'),
 });
 export const mapTrack = (r: Row) => ({
   id: String(r.id), name: String(r.name), country: String(r.country),
@@ -25,7 +40,7 @@ export const mapChampionship = (r: Row) => ({
   useGarage: Boolean(r.use_garage), useEvents: Boolean(r.use_events),
   usePress: Boolean(r.use_press), useSponsorship: Boolean(r.use_sponsorship),
   isActive: Boolean(r.is_active), finishedAt: optional(r.finished_at),
-  associationId: optional(r.association_id), scoringSystemId: optional(r.scoring_system_id),
+  scoringSystemId: String(r.scoring_system_id),
 });
 export const mapRace = (r: Row) => ({
   id: String(r.id), championshipId: optional(r.championship_id),
@@ -44,7 +59,6 @@ export const mapRaceResult = (r: Row) => ({
   id: String(r.id), raceId: String(r.race_id), driverId: String(r.driver_id),
   carId: String(r.car_id), gridPosition: Number(r.grid_position),
   position: Number(r.position), pointsAwarded: Number(r.points_awarded),
-  dnf: Boolean(r.dnf),
   gapTurns: r.gap_turns == null ? undefined : Number(r.gap_turns),
   driverOfTheDay: r.driver_of_the_day == null ? undefined : Boolean(r.driver_of_the_day),
   loadout: r.loadout ?? [],

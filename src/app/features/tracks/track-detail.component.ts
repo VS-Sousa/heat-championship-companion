@@ -5,6 +5,8 @@ import { Track, TrackDriverHistoryRow } from '../../core/models/domain.models';
 import { TracksService } from '../../core/services/tracks.service';
 import { RacesService } from '../../core/services/races.service';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { I18nService } from '../../core/i18n/i18n.service';
+import { countryLabel } from '../../core/data/countries';
 
 @Component({
   selector: 'app-track-detail',
@@ -16,11 +18,16 @@ export class TrackDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly tracksService = inject(TracksService);
   private readonly racesService = inject(RacesService);
+  private readonly i18n = inject(I18nService);
 
   readonly track = signal<Track | null>(null);
   readonly drivers = signal<TrackDriverHistoryRow[]>([]);
   readonly error = signal<string | null>(null);
   readonly loading = signal(true);
+
+  countryText(value: string): string {
+    return countryLabel(value, this.i18n.lang());
+  }
 
   async ngOnInit(): Promise<void> {
     const id = this.route.snapshot.paramMap.get('id');

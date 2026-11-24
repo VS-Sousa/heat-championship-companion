@@ -17,6 +17,10 @@ import { TranslatePipe } from '../../../core/i18n/translate.pipe';
 export interface SearchableSelectOption {
   value: string;
   label: string;
+  /** Optional leading content (e.g. a flag emoji) shown before the label. */
+  prefix?: string;
+  /** Optional extra text matched by the search box (e.g. an ISO code). */
+  keywords?: string;
   disabled?: boolean;
 }
 
@@ -48,6 +52,9 @@ export interface SearchableSelectOption {
       (click)="toggle()"
     >
       <span class="min-w-0 flex-1 truncate" [class.text-heat-muted]="!selectedLabel()">
+        @if (selectedOption()?.prefix) {
+          <span class="mr-2" aria-hidden="true">{{ selectedOption()!.prefix }}</span>
+        }
         {{ selectedLabel() || placeholder || ('common.select' | t) }}
       </span>
       <span class="shrink-0 text-heat-muted" aria-hidden="true">▾</span>
@@ -86,6 +93,9 @@ export interface SearchableSelectOption {
                 (click)="choose(option)"
                 (mouseenter)="highlightIndex.set(i)"
               >
+                @if (option.prefix) {
+                  <span class="mr-2 shrink-0" aria-hidden="true">{{ option.prefix }}</span>
+                }
                 <span class="truncate">{{ option.label }}</span>
               </button>
             </li>
@@ -130,14 +140,20 @@ export class SearchableSelectComponent implements ControlValueAccessor {
   private onChange: (value: string) => void = () => undefined;
   private onTouched: () => void = () => undefined;
 
+  selectedOption(): SearchableSelectOption | undefined {
+    return this.options.find((o) => o.value === this.innerValue);
+  }
+
   selectedLabel(): string {
-    return this.options.find((o) => o.value === this.innerValue)?.label ?? '';
+    return this.selectedOption()?.label ?? '';
   }
 
   filteredOptions(): SearchableSelectOption[] {
     const q = this.normalize(this.query());
     if (!q) return this.options;
-    return this.options.filter((o) => this.normalize(o.label).includes(q));
+    return this.options.filter((o) =>
+      this.normalize(`${o.label} ${o.keywords ?? ''}`).includes(q)
+    );
   }
 
   visibleOptions(): SearchableSelectOption[] {

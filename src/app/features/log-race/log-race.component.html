@@ -163,13 +163,25 @@
 
         <div>
           <label class="heat-label" for="scoringSystem">{{ 'logRace.scoringSystem' | t }}</label>
-          <app-searchable-select
-            inputId="scoringSystem"
-            name="scoringSystemId"
-            [ngModel]="scoringSystemId()"
-            (ngModelChange)="scoringSystemId.set($event)"
-            [options]="scoringOptions()"
-          />
+          @if (isChampionshipMode()) {
+            <p
+              id="scoringSystem"
+              class="heat-input flex items-center text-heat-ink"
+              aria-readonly="true"
+            >
+              {{ championshipDefaultScoringLabel() || '—' }}
+            </p>
+            <p class="mt-1 text-xs text-heat-muted">{{ 'logRace.scoringFromChampionship' | t }}</p>
+          } @else {
+            <app-searchable-select
+              inputId="scoringSystem"
+              name="scoringSystemId"
+              [ngModel]="scoringSystemId()"
+              (ngModelChange)="scoringSystemId.set($event)"
+              [options]="scoringOptions()"
+              [placeholder]="'logRace.select' | t"
+            />
+          }
         </div>
 
         <div>
@@ -206,7 +218,7 @@
             />
             {{ 'logRace.trackCondition' | t }}
           </label>
-          @if (!isChampionshipMode() || !selectedChampionship()?.useGarage) {
+          @if (!isChampionshipMode()) {
             <label
               class="flex items-center gap-2 text-sm uppercase tracking-[0.14em] text-heat-muted"
               for="useGarageToggle"
@@ -220,7 +232,7 @@
               />
               {{ 'logRace.useGarage' | t }}
             </label>
-          } @else {
+          } @else if (useGarage()) {
             <p class="text-sm uppercase tracking-[0.14em] text-heat-yellow">
               ✓ {{ 'logRace.useGarage' | t }}
             </p>
@@ -239,19 +251,116 @@
           <h2 class="font-display text-xl tracking-wider sm:text-2xl">
             {{ 'logRace.entries' | t }}
           </h2>
-          <button
-            type="button"
-            class="heat-btn-secondary w-full sm:w-auto"
-            (click)="addEntryRow()"
-          >
-            {{ 'logRace.addDriver' | t }}
-          </button>
+          @if (!isChampionshipMode()) {
+            <button
+              type="button"
+              class="heat-btn-secondary w-full sm:w-auto"
+              (click)="addEntryRow()"
+            >
+              {{ 'logRace.addDriver' | t }}
+            </button>
+          }
         </div>
 
+        @if (isChampionshipMode()) {
+          @if (!entries().length) {
+            <p class="text-heat-muted">{{ 'logRace.noChampionshipEntries' | t }}</p>
+          }
+          <div class="space-y-4">
+            @for (row of entries(); track row.originalDriverId ?? $index; let i = $index) {
+              <div
+                class="grid grid-cols-2 items-center gap-3 rounded-sm border border-heat-border bg-heat-steel/40 p-3 md:grid-cols-5"
+              >
+                <div class="col-span-2 min-w-0 md:col-span-2">
+                  <p class="heat-label">{{ 'logRace.driver' | t }}</p>
+                  <p class="truncate">
+                    <span class="mr-2 font-mono text-heat-yellow">
+                      #{{ entryFor(row)?.number }}
+                    </span>
+                    <span class="mr-2 font-mono text-xs uppercase text-heat-muted">
+                      {{ entryFor(row)?.abbreviation }}
+                    </span>
+                    {{ driverLabel(row.driverId) }}
+                    @if (isSubstituted(row)) {
+                      <span class="ml-1 text-[10px] uppercase tracking-widest text-heat-yellow">
+                        {{ 'logRace.substituted' | t }}
+                      </span>
+                    }
+                  </p>
+                </div>
+
+                <div class="col-span-2 min-w-0 md:col-span-1">
+                  <p class="heat-label">{{ 'logRace.car' | t }}</p>
+                  <p class="flex items-center gap-2 truncate">
+                    <span
+                      class="h-4 w-4 shrink-0 rounded-full border border-heat-border"
+                      [style.backgroundColor]="carById(row.carId)?.colorHex || 'transparent'"
+                    ></span>
+                    {{ carById(row.carId)?.name }}
+                    <span class="text-[10px] uppercase tracking-widest text-heat-muted">
+                      🔒
+                    </span>
+                  </p>
+                </div>
+
+                <div>
+                  <label class="heat-label">{{ 'logRace.grid' | t }}</label>
+                  <input
+                    class="heat-input"
+                    type="number"
+                    min="1"
+                    [ngModel]="row.gridPosition"
+                    [name]="'grid-' + i"
+                    (ngModelChange)="updateEntry(i, 'gridPosition', +$event)"
+                  />
+                </div>
+
+                <div class="flex items-end justify-end">
+                  @if (isSubstituted(row)) {
+                    <button
+                      type="button"
+                      class="heat-btn-ghost text-sm"
+                      (click)="undoSubstitute(i)"
+                    >
+                      {{ 'logRace.undoSubstitute' | t }}
+                    </button>
+                  } @else {
+                    @if (substituteCandidate(i); as legend) {
+                      <button
+                        type="button"
+                        class="heat-btn-secondary text-sm"
+                        (click)="substituteDriver(i)"
+                      >
+                        {{ 'logRace.substitute' | t }}: {{ driverShortLabel(legend) }}
+                      </button>
+                    }
+                  }
+                </div>
+
+                @if (useGarage()) {
+                  <div class="col-span-2 md:col-span-5">
+                    <p class="heat-label">{{ 'logRace.loadout' | t }}</p>
+                    <div class="flex flex-wrap gap-2">
+                      @for (upgradeId of row.loadout; track upgradeId) {
+                        <span
+                          class="rounded-sm border border-heat-yellow bg-heat-yellow/15 px-2 py-1 text-xs uppercase tracking-[0.1em] text-heat-yellow"
+                        >
+                          {{ upgradeName(upgradeId) }}
+                        </span>
+                      } @empty {
+                        <p class="text-sm text-heat-muted">—</p>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        } @else {
         <div class="space-y-4">
           @for (row of entries(); track $index; let i = $index) {
             <div
-              class="grid grid-cols-2 gap-3 rounded-sm border border-heat-border bg-heat-steel/40 p-3 md:grid-cols-5"
+              class="grid grid-cols-2 gap-3 rounded-sm border border-heat-border bg-heat-steel/40 p-3 md:grid-cols-7"
             >
               <div class="col-span-2 md:col-span-2">
                 <label class="heat-label">{{ 'logRace.driver' | t }}</label>
@@ -296,8 +405,31 @@
                 />
               </div>
 
+              <div>
+                <label class="heat-label">{{ 'logRace.entryNumber' | t }}</label>
+                <input
+                  class="heat-input font-mono"
+                  type="number"
+                  min="1"
+                  [ngModel]="row.number"
+                  [name]="'number-' + i"
+                  (ngModelChange)="updateEntry(i, 'number', $event === null || $event === '' ? null : +$event)"
+                />
+              </div>
+
+              <div>
+                <label class="heat-label">{{ 'logRace.entryAbbreviation' | t }}</label>
+                <input
+                  class="heat-input font-mono uppercase"
+                  maxlength="4"
+                  [ngModel]="row.abbreviation"
+                  [name]="'abbr-' + i"
+                  (ngModelChange)="updateEntry(i, 'abbreviation', $event)"
+                />
+              </div>
+
               @if (useGarage()) {
-                <div class="col-span-2 md:col-span-5">
+                <div class="col-span-2 md:col-span-7">
                   <p class="heat-label">{{ 'logRace.loadout' | t }}</p>
                   <div class="flex flex-wrap gap-2">
                     @for (upgrade of upgrades(); track upgrade.id) {
@@ -316,7 +448,6 @@
                           (ngModelChange)="toggleLoadout(i, upgrade.id, $event)"
                         />
                         {{ upgrade.name }}
-                        <span class="font-mono">({{ upgrade.heatCost }})</span>
                       </label>
                     } @empty {
                       <p class="text-sm text-heat-muted">{{ 'garage.empty' | t }}</p>
@@ -325,7 +456,7 @@
                 </div>
               }
 
-              <div class="col-span-2 flex justify-end md:col-span-5">
+              <div class="col-span-2 flex justify-end md:col-span-7">
                 <button
                   type="button"
                   class="heat-btn-ghost text-sm text-heat-red"
@@ -338,9 +469,17 @@
             </div>
           }
         </div>
+        }
       </section>
 
-      <button type="submit" class="heat-btn-primary w-full sm:w-auto" [disabled]="saving()">
+      @if (noPlannedRacesAvailable()) {
+        <p class="text-sm text-heat-muted">{{ 'logRace.noPlannedRaces' | t }}</p>
+      }
+      <button
+        type="submit"
+        class="heat-btn-primary w-full sm:w-auto"
+        [disabled]="saving() || noPlannedRacesAvailable()"
+      >
         {{ saving() ? ('logRace.saving' | t) : ('logRace.saveContinue' | t) }}
       </button>
     </form>
@@ -388,7 +527,6 @@
                   class="h-3 w-3 rounded-full border border-heat-border"
                   [style.backgroundColor]="carColorForDriver(driver.id)"
                 ></span>
-                <span class="font-mono text-xs text-heat-muted">#{{ driver.number }}</span>
               </span>
               <span class="font-display text-lg leading-tight tracking-wider">
                 {{ driverShortLabel(driver) }}
@@ -514,7 +652,7 @@
         <div class="space-y-3">
           @for (row of finishRows(); track row.driverId; let i = $index; let first = $first; let last = $last) {
             <div
-              class="grid grid-cols-2 items-center gap-3 rounded-sm border border-heat-border bg-heat-steel/40 p-3 md:grid-cols-6"
+              class="grid grid-cols-2 items-center gap-3 rounded-sm border border-heat-border bg-heat-steel/40 p-3 md:grid-cols-5"
             >
               <div class="flex items-center gap-2 md:col-span-2">
                 <span class="w-10 font-display text-2xl text-heat-yellow">P{{ i + 1 }}</span>
@@ -557,16 +695,6 @@
                   (ngModelChange)="updateFinishRow(i, 'gapTurns', +$event)"
                 />
               </div>
-
-              <label class="flex items-center gap-2 text-sm uppercase tracking-[0.14em] text-heat-muted">
-                <input
-                  type="checkbox"
-                  [ngModel]="row.dnf"
-                  [name]="'dnf-' + i"
-                  (ngModelChange)="updateFinishRow(i, 'dnf', $event)"
-                />
-                {{ 'logRace.dnf' | t }}
-              </label>
 
               <p class="text-right font-mono text-sm text-heat-yellow">
                 {{ 'logRace.pts' | t }}: {{ pointsPreview(row, i) }}

@@ -1,5 +1,4 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Car, Driver } from '../../core/models/domain.models';
@@ -19,7 +18,6 @@ import { SearchableSelectComponent } from '../../shared/components/searchable-se
   standalone: true,
   imports: [
     FormsModule,
-    DecimalPipe,
     TranslatePipe,
     RouterLink,
     DriverKindFilterComponent,
@@ -55,8 +53,6 @@ export class DriversComponent implements OnInit {
   editingId: string | null = null;
   name = '';
   nickname = '';
-  abbreviation = '';
-  number = 1;
   isLegend = false;
   fixedCarId = '';
   favoriteCarId = '';
@@ -100,8 +96,6 @@ export class DriversComponent implements OnInit {
     this.editingId = null;
     this.name = '';
     this.nickname = '';
-    this.abbreviation = '';
-    this.number = 1;
     this.isLegend = false;
     this.fixedCarId = '';
     this.favoriteCarId = '';
@@ -116,8 +110,6 @@ export class DriversComponent implements OnInit {
     this.editingId = driver.id;
     this.name = driver.name;
     this.nickname = driver.nickname ?? '';
-    this.abbreviation = driver.abbreviation;
-    this.number = driver.number;
     this.isLegend = driver.isLegend;
     this.fixedCarId = driver.fixedCarId ?? '';
     this.favoriteCarId = driver.favoriteCarId ?? '';
@@ -132,14 +124,7 @@ export class DriversComponent implements OnInit {
   async save(): Promise<void> {
     this.error.set(null);
     try {
-      const abbr = this.abbreviation.trim().toUpperCase();
       if (!this.name.trim()) throw new Error('Driver name is required.');
-      if (!/^[A-Z]{3}$/.test(abbr)) {
-        throw new Error('Abbreviation must be exactly 3 letters.');
-      }
-      if (this.number < 0 || this.number > 99) {
-        throw new Error('Number must be between 0 and 99.');
-      }
       if (this.isLegend && !this.fixedCarId) {
         throw new Error('Legend drivers require a fixed car.');
       }
@@ -152,8 +137,6 @@ export class DriversComponent implements OnInit {
       const payload = {
         name: this.name.trim(),
         nickname: this.nickname.trim() || undefined,
-        abbreviation: abbr,
-        number: this.number,
         isLegend: this.isLegend,
         fixedCarId: this.isLegend ? this.fixedCarId : undefined,
         favoriteCarId,

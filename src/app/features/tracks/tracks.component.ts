@@ -1,21 +1,27 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Track, TrackCorner } from '../../core/models/domain.models';
 import { TracksService } from '../../core/services/tracks.service';
 import { SessionService } from '../../core/services/session.service';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { I18nService } from '../../core/i18n/i18n.service';
+import { SearchableSelectComponent } from '../../shared/components/searchable-select/searchable-select.component';
+import { countryLabel, countryOptions, resolveCountryCode } from '../../core/data/countries';
 
 @Component({
   selector: 'app-tracks',
   standalone: true,
-  imports: [FormsModule, TranslatePipe, RouterLink],
+  imports: [FormsModule, TranslatePipe, RouterLink, SearchableSelectComponent],
   templateUrl: './tracks.component.html',
   styleUrl: './tracks.component.css',
 })
 export class TracksComponent implements OnInit {
   private readonly tracksService = inject(TracksService);
+  private readonly i18n = inject(I18nService);
   readonly session = inject(SessionService);
+
+  readonly countryOptions = computed(() => countryOptions(this.i18n.lang()));
 
   readonly tracks = signal<Track[]>([]);
   readonly error = signal<string | null>(null);
@@ -47,6 +53,10 @@ export class TracksComponent implements OnInit {
     }
   }
 
+  countryText(value: string): string {
+    return countryLabel(value, this.i18n.lang());
+  }
+
   addCorner(): void {
     this.corners = [
       ...this.corners,
@@ -75,7 +85,7 @@ export class TracksComponent implements OnInit {
   startEdit(track: Track): void {
     this.editingId = track.id;
     this.name = track.name;
-    this.country = track.country;
+    this.country = resolveCountryCode(track.country) || track.country;
     this.lengthSpaces = track.lengthSpaces ?? null;
     this.laps = track.laps ?? null;
     this.corners = (track.corners ?? []).map((c) => ({ ...c }));
@@ -96,10 +106,9 @@ export class TracksComponent implements OnInit {
         lengthSpaces: this.lengthSpaces ? Number(this.lengthSpaces) : undefined,
         laps: this.laps ? Number(this.laps) : undefined,
         corners: this.corners
-          .filter((c) => c.name.trim())
           .map((c, i) => ({
             order: Number(c.order) || i + 1,
-            name: c.name.trim(),
+            name: (c.name ?? '').trim(),
             maxSpeed: Number(c.maxSpeed) || 0,
           }))
           .sort((a, b) => a.order - b.order),

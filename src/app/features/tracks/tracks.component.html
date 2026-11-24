@@ -30,7 +30,7 @@
             >
               {{ track.name }}
             </a>
-            <p class="text-xs uppercase tracking-[0.16em] text-heat-muted">{{ track.country }}</p>
+            <p class="text-xs uppercase tracking-[0.16em] text-heat-muted">{{ countryText(track.country) }}</p>
           </div>
           @if (session.isHost()) {
             <div class="flex shrink-0 gap-2">
@@ -81,7 +81,12 @@
         </div>
         <div>
           <label class="heat-label" for="country">{{ 'tracks.country' | t }}</label>
-          <input id="country" class="heat-input" name="country" [(ngModel)]="country" />
+          <app-searchable-select
+            inputId="country"
+            name="country"
+            [(ngModel)]="country"
+            [options]="countryOptions()"
+          />
         </div>
         <div class="grid gap-3 sm:grid-cols-2">
           <div>

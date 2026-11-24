@@ -6,6 +6,7 @@ import {
   Association,
   Car,
   Championship,
+  ChampionshipEntry,
   Driver,
   GarageUpgrade,
   Race,
@@ -35,6 +36,7 @@ import {
 import { GridAssignment } from '../../core/services/grid.service';
 import { formatDriverName } from '../../core/utils/driver-display';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { countryLabel } from '../../core/data/countries';
 import { resolveCornerOrder } from '../../core/data/shared/badge-evaluator';
 
 export type WizardStep = 1 | 2 | 3;
@@ -45,6 +47,11 @@ interface EntryDraft {
   gridPosition: number;
   loadout: string[];
   carLocked: boolean;
+  /** Standalone races only. */
+  number: number | null;
+  abbreviation: string;
+  /** Championship races: driver originally registered for this car. */
+  originalDriverId?: string;
 }
 
 interface FinishRow {
@@ -52,7 +59,6 @@ interface FinishRow {
   carId: string;
   gridPosition: number;
   loadout: string[];
-  dnf: boolean;
   gapTurns: number;
 }
 
@@ -122,6 +128,8 @@ export class LogRaceComponent implements OnInit {
   readonly upgrades = signal<GarageUpgrade[]>([]);
   readonly plannedRaces = signal<Race[]>([]);
   readonly standings = signal<StandingRow[]>([]);
+  /** Registered entries of the selected championship (championship mode). */
+  readonly championshipEntries = signal<ChampionshipEntry[]>([]);
 
   readonly error = signal<string | null>(null);
   readonly success = signal<string | null>(null);
@@ -166,10 +174,11 @@ export class LogRaceComponent implements OnInit {
     () => this.raceType() === 'championship' && !!this.selectedChampionship()
   );
 
-  readonly useGarage = computed(
-    () =>
-      this.useGarageToggle() ||
-      (this.isChampionshipMode() && !!this.selectedChampionship()?.useGarage)
+  /** Championship races follow the championship setting; standalone uses the toggle. */
+  readonly useGarage = computed(() =>
+    this.isChampionshipMode()
+      ? !!this.selectedChampionship()?.useGarage
+      : this.useGarageToggle()
   );
 
   readonly selectedTrack = computed(
@@ -211,13 +220,11 @@ export class LogRaceComponent implements OnInit {
     CORNER_EVENT_TYPES.includes(this.liveEventType())
   );
 
+  /** Championship races always use the championship's scoring system. */
   readonly activeScoringSystem = computed(() => {
-    const id =
-      this.scoringSystemId() ||
-      (this.isChampionshipMode()
-        ? this.selectedChampionship()?.scoringSystemId
-        : '') ||
-      '';
+    const id = this.isChampionshipMode()
+      ? (this.selectedChampionship()?.scoringSystemId ?? '')
+      : this.scoringSystemId();
     return this.scoringSystems().find((s) => s.id === id) ?? null;
   });
 
@@ -225,6 +232,11 @@ export class LogRaceComponent implements OnInit {
     const id = this.selectedChampionship()?.scoringSystemId;
     return this.scoringSystems().find((s) => s.id === id)?.name ?? null;
   });
+
+  /** Championship mode needs a planned calendar slot; block continuing when none exists. */
+  readonly noPlannedRacesAvailable = computed(() =>
+    this.isChampionshipMode() && !this.raceId() && this.plannedRaces().length === 0
+  );
 
   readonly championshipOptions = computed(() =>
     this.championships().map((c) => ({
@@ -244,32 +256,25 @@ export class LogRaceComponent implements OnInit {
   readonly trackOptions = computed(() =>
     this.tracks().map((track) => ({
       value: track.id,
-      label: `${track.name} (${track.country})`,
+      label: `${track.name} (${countryLabel(track.country, this.i18n.lang())})`,
     }))
   );
 
   readonly associationOptions = computed((): SearchableSelectOption[] => {
     this.i18n.lang();
     return [
-      { value: '', label: '—' },
+      { value: '', label: this.i18n.t('associations.fiaOption') },
       ...this.associations().map((a) => ({
         value: a.id,
-        label: `${a.name} (${a.abbreviation})`,
+        label: a.name,
       })),
     ];
   });
 
-  readonly scoringOptions = computed((): SearchableSelectOption[] => {
-    this.i18n.lang();
-    const defaultName = this.championshipDefaultScoringLabel();
-    const first = defaultName
-      ? `${this.i18n.t('logRace.scoringDefault')}: ${defaultName}`
-      : this.i18n.t('logRace.scoringDefault');
-    return [
-      { value: '', label: first },
-      ...this.scoringSystems().map((s) => ({ value: s.id, label: s.name })),
-    ];
-  });
+  /** Standalone races: required, no empty option. */
+  readonly scoringOptions = computed((): SearchableSelectOption[] =>
+    this.scoringSystems().map((s) => ({ value: s.id, label: s.name }))
+  );
 
   readonly weatherOptions = computed((): SearchableSelectOption[] => {
     this.i18n.lang();
@@ -320,14 +325,16 @@ export class LogRaceComponent implements OnInit {
       this.associations.set(associations);
       this.scoringSystems.set(scoringSystems);
       this.upgrades.set(upgrades);
+      // Standalone scoring is required; preselect the first system.
+      if (scoringSystems[0]) this.scoringSystemId.set(scoringSystems[0].id);
       if (championships[0]) {
         this.championshipId.set(championships[0].id);
-        this.associationId.set(championships[0].associationId ?? '');
         await this.loadPlanned(championships[0].id);
+        await this.loadChampionshipEntries(championships[0].id);
       } else {
         this.raceType.set('standalone');
+        this.resetStandaloneEntries();
       }
-      this.addEntryRow();
     } catch (err) {
       this.error.set(
         err instanceof Error ? err.message : 'Failed to load race form data.'
@@ -339,19 +346,128 @@ export class LogRaceComponent implements OnInit {
 
   // ---------------------------------------------------------------- step 1
 
-  setRaceType(type: 'championship' | 'standalone'): void {
+  async setRaceType(type: 'championship' | 'standalone'): Promise<void> {
+    if (this.raceType() === type) return;
     this.raceType.set(type);
+    this.error.set(null);
+    try {
+      if (type === 'championship') {
+        await this.loadChampionshipEntries(this.championshipId());
+      } else {
+        this.resetStandaloneEntries();
+      }
+    } catch (err) {
+      this.error.set(
+        err instanceof Error ? err.message : 'Failed to load entries.'
+      );
+    }
   }
 
   async onChampionshipChange(id: string): Promise<void> {
     this.championshipId.set(id);
     this.plannedRaceId.set('');
     this.trackId.set('');
-    const championship = this.championships().find((c) => c.id === id);
-    if (championship?.associationId) {
-      this.associationId.set(championship.associationId);
+    try {
+      await this.loadPlanned(id);
+      await this.loadChampionshipEntries(id);
+    } catch (err) {
+      this.error.set(
+        err instanceof Error ? err.message : 'Failed to load championship.'
+      );
     }
-    await this.loadPlanned(id);
+  }
+
+  /** Prefill the grid from the championship's registered entries (cars locked). */
+  private async loadChampionshipEntries(championshipId: string): Promise<void> {
+    if (!championshipId) {
+      this.championshipEntries.set([]);
+      this.entries.set([]);
+      return;
+    }
+    const list = await this.championshipsService.listEntries(championshipId);
+    this.championshipEntries.set(list);
+    this.entries.set(list.map((e, i) => this.draftFromEntry(e, i + 1)));
+  }
+
+  private draftFromEntry(entry: ChampionshipEntry, gridPosition: number): EntryDraft {
+    return {
+      driverId: entry.driverId,
+      carId: entry.carId,
+      gridPosition,
+      loadout: this.loadoutForEntry(entry),
+      carLocked: true,
+      number: entry.number,
+      abbreviation: entry.abbreviation,
+      originalDriverId: entry.driverId,
+    };
+  }
+
+  /** Humans bring their registered garage upgrades; legends never do. */
+  private loadoutForEntry(entry: ChampionshipEntry): string[] {
+    const driver = this.drivers().find((d) => d.id === entry.driverId);
+    if (!driver || driver.isLegend) return [];
+    return [...(entry.garageUpgradeIds ?? [])];
+  }
+
+  private resetStandaloneEntries(): void {
+    this.entries.set([]);
+    this.addEntryRow();
+  }
+
+  entryFor(row: EntryDraft): ChampionshipEntry | undefined {
+    return this.championshipEntries().find(
+      (e) => e.driverId === row.originalDriverId
+    );
+  }
+
+  isSubstituted(row: EntryDraft): boolean {
+    return !!row.originalDriverId && row.driverId !== row.originalDriverId;
+  }
+
+  /** Legend that owns this row's car and can stand in for a human driver. */
+  substituteCandidate(index: number): Driver | null {
+    if (!this.isChampionshipMode()) return null;
+    const row = this.entries()[index];
+    if (!row || this.isSubstituted(row)) return null;
+    const current = this.drivers().find((d) => d.id === row.driverId);
+    if (!current || current.isLegend) return null;
+    return (
+      this.drivers().find(
+        (d) =>
+          d.isLegend &&
+          d.fixedCarId === row.carId &&
+          !this.entries().some((r) => r.driverId === d.id)
+      ) ?? null
+    );
+  }
+
+  /** Swap a human entry for the legend bound to the same car (car is kept). */
+  substituteDriver(index: number): void {
+    const legend = this.substituteCandidate(index);
+    if (!legend) return;
+    this.entries.update((rows) =>
+      rows.map((row, i) =>
+        i === index ? { ...row, driverId: legend.id, loadout: [] } : row
+      )
+    );
+  }
+
+  undoSubstitute(index: number): void {
+    this.entries.update((rows) =>
+      rows.map((row, i) => {
+        if (i !== index || !row.originalDriverId) return row;
+        const entry = this.entryFor(row);
+        return {
+          ...row,
+          driverId: row.originalDriverId,
+          loadout: entry ? this.loadoutForEntry(entry) : [],
+        };
+      })
+    );
+  }
+
+  upgradeName(id: string): string {
+    return this.upgrades().find((u) => u.id === id)?.name ?? id;
   }
 
   onPlannedRaceChange(id: string): void {
@@ -391,6 +507,8 @@ export class LogRaceComponent implements OnInit {
         gridPosition: next,
         loadout: [],
         carLocked: false,
+        number: null,
+        abbreviation: '',
       },
     ]);
   }
@@ -451,7 +569,7 @@ export class LogRaceComponent implements OnInit {
       const legend = driver.isLegend ? ` ${this.i18n.t('logRace.legend')}` : '';
       return {
         value: driver.id,
-        label: `#${driver.number} ${formatDriverName(driver)}${legend}`,
+        label: `${formatDriverName(driver)}${legend}`,
         disabled:
           (this.isDriverTaken(driver.id, rowIndex) && row?.driverId !== driver.id) ||
           (this.isLegendCarBlocked(driver, rowIndex) && row?.driverId !== driver.id),
@@ -560,8 +678,26 @@ export class LogRaceComponent implements OnInit {
         throw new Error(this.i18n.t('logRace.errorPlanned'));
       }
     }
+    if (this.raceType() === 'standalone' && !this.scoringSystemId()) {
+      throw new Error(this.i18n.t('logRace.errorScoring'));
+    }
     const rows = this.entries();
     if (!rows.length) throw new Error(this.i18n.t('logRace.errorEntries'));
+    if (this.raceType() === 'standalone') {
+      for (const row of rows) {
+        const num = Number(row.number);
+        if (!Number.isInteger(num) || num < 1 || !row.abbreviation.trim()) {
+          throw new Error(this.i18n.t('logRace.errorNumberAbbr'));
+        }
+      }
+      if (
+        new Set(rows.map((r) => Number(r.number))).size !== rows.length ||
+        new Set(rows.map((r) => r.abbreviation.trim().toUpperCase())).size !==
+          rows.length
+      ) {
+        throw new Error(this.i18n.t('logRace.errorNumberAbbrDuplicate'));
+      }
+    }
     for (const row of rows) {
       if (!row.driverId || !row.carId) {
         throw new Error(this.i18n.t('logRace.errorDriverCar'));
@@ -592,13 +728,20 @@ export class LogRaceComponent implements OnInit {
       this.validateStep1();
 
       const useGarage = this.useGarage();
+      const championshipMode = this.raceType() === 'championship';
       const entries: RaceEntry[] = this.entries().map((row) => ({
         driverId: row.driverId,
         carId: row.carId,
+        // Championship races take number/abbreviation from championship entries.
+        ...(championshipMode
+          ? {}
+          : {
+              number: Number(row.number),
+              abbreviation: row.abbreviation.trim().toUpperCase(),
+            }),
         gridPosition: Number(row.gridPosition),
         loadout: useGarage ? row.loadout : [],
       }));
-      const championshipMode = this.raceType() === 'championship';
 
       const pre = await this.racesService.savePreRace({
         raceId:
@@ -610,7 +753,10 @@ export class LogRaceComponent implements OnInit {
         reverseDirection: this.reverseDirection(),
         name: this.raceName.trim(),
         abbreviation: this.raceAbbreviation.trim().toUpperCase(),
-        scoringSystemId: this.scoringSystemId() || undefined,
+        // Championship races use the championship's scoring system.
+        scoringSystemId: championshipMode
+          ? undefined
+          : this.scoringSystemId() || undefined,
         weatherCondition: this.weatherCondition || undefined,
         trackCondition: this.useTrackConditions ? 'enabled' : undefined,
         racedAt: this.racedAt,
@@ -642,7 +788,7 @@ export class LogRaceComponent implements OnInit {
   }
 
   driverShortLabel(driver: Driver): string {
-    return driver.nickname?.trim() || driver.abbreviation || driver.name;
+    return driver.nickname?.trim() || driver.name;
   }
 
   carColorForDriver(driverId: string): string {
@@ -741,7 +887,6 @@ export class LogRaceComponent implements OnInit {
           carId: e.carId,
           gridPosition: Number(e.gridPosition),
           loadout: this.useGarage() ? e.loadout : [],
-          dnf: false,
           gapTurns: 0,
         }))
       );
@@ -792,7 +937,7 @@ export class LogRaceComponent implements OnInit {
       : undefined;
     const table = system?.points ?? fallback;
     if (!table) return 0;
-    let points = this.racesService.pointsForPosition(table, position, row.dnf);
+    let points = this.racesService.pointsForPosition(table, position);
     if (system) {
       if (row.gridPosition === 1) points += system.bonusPole;
       if (this.driverOfDayId() === row.driverId) {
@@ -816,7 +961,6 @@ export class LogRaceComponent implements OnInit {
         gridPosition: Number(row.gridPosition),
         position: i + 1,
         pointsAwarded: this.pointsPreview(row, i),
-        dnf: row.dnf,
         gapTurns: Number(row.gapTurns) || 0,
         driverOfTheDay: this.driverOfDayId() === row.driverId,
         loadout: row.loadout,

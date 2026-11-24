@@ -23,7 +23,7 @@ const R3 = '66666666-6666-4666-8666-666666666603';
 
 export function createPreviewSeed(): PreviewDb {
   return {
-    associations: [{ id: '88888888-8888-4888-8888-888888888801', name: 'Demo Racing Association', abbreviation: 'DRA' }],
+    associations: [{ id: '88888888-8888-4888-8888-888888888801', name: 'Demo Racing Association' }],
     associationMembers: [
       { associationId: '88888888-8888-4888-8888-888888888801', driverId: D_ALO },
       { associationId: '88888888-8888-4888-8888-888888888801', driverId: D_HAM },
@@ -35,13 +35,16 @@ export function createPreviewSeed(): PreviewDb {
     }],
     garageUpgrades: [{
       id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa01', name: 'Performance Tires',
-      category: 'tires', heatCost: 2, effect: 'Improves corner consistency.',
+      description: 'Improves corner consistency.', set: 'basegame',
     }],
     badgeDefinitions: [
       { id: 'vacuum_architect', name: 'Vacuum Architect', description: 'Most slipstream overtakes.', metric: 'slipstream_overtakes' },
       { id: 'lead_foot', name: 'Lead Foot', description: 'Most corners at safe maximum speed.', metric: 'corner_speed_ok' },
       { id: 'swiss_watch', name: 'Swiss Watch', description: 'Most fastest turns.', metric: 'fastest_turn' },
       { id: 'russian_roulette', name: 'Russian Roulette', description: 'Most corner spins.', metric: 'corner_spins' },
+      { id: 'pole_converter', name: 'Pole Converter', description: 'Started on pole and won the race.', metric: 'pole_conversions' },
+      { id: 'comeback_king', name: 'Comeback King', description: 'Biggest grid-to-finish position gain.', metric: 'positions_gained' },
+      { id: 'clean_sweep', name: 'Hat-trick', description: 'Pole, win and Driver of the Day in the same race.', metric: 'clean_sweep' },
     ],
     badgeAwards: [],
     cars: [
@@ -75,40 +78,32 @@ export function createPreviewSeed(): PreviewDb {
         id: D_ALO,
         name: 'Ayrton',
         nickname: 'Lightning',
-        abbreviation: 'ALO',
-        number: 1,
         isLegend: false,
         favoriteCarId: CAR_RED,
       },
       {
         id: D_SEN,
         name: 'Senna',
-        abbreviation: 'SEN',
-        number: 12,
         isLegend: true,
         fixedCarId: CAR_YELLOW,
       },
       {
         id: D_HAM,
         name: 'Hamilton',
-        abbreviation: 'HAM',
-        number: 44,
         isLegend: false,
         favoriteCarId: CAR_BLUE,
       },
       {
         id: D_VER,
         name: 'Verstappen',
-        abbreviation: 'VER',
-        number: 33,
         isLegend: false,
         favoriteCarId: CAR_GREEN,
       },
     ],
     tracks: [
-      { id: T_USA, name: 'USA', country: 'United States', lengthSpaces: 24, laps: 2, corners: [{ order: 1, name: 'Turn 1', maxSpeed: 3 }] },
-      { id: T_GBR, name: 'Great Britain', country: 'United Kingdom' },
-      { id: T_ITA, name: 'Italy', country: 'Italy' },
+      { id: T_USA, name: 'USA', country: 'US', lengthSpaces: 24, laps: 2, corners: [{ order: 1, name: 'Turn 1', maxSpeed: 3 }] },
+      { id: T_GBR, name: 'Great Britain', country: 'GB' },
+      { id: T_ITA, name: 'Italy', country: 'IT' },
     ],
     championships: [
       {
@@ -123,6 +118,48 @@ export function createPreviewSeed(): PreviewDb {
         usePress: false,
         useSponsorship: false,
         isActive: true,
+        scoringSystemId: '99999999-9999-4999-8999-999999999901',
+      },
+    ],
+    championshipCars: {
+      [CHAMP]: [CAR_RED, CAR_BLUE, CAR_GREEN, CAR_YELLOW],
+    },
+    championshipEntries: [
+      {
+        id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb01',
+        championshipId: CHAMP,
+        driverId: D_SEN,
+        carId: CAR_YELLOW,
+        number: 1,
+        abbreviation: 'SEN',
+        garageUpgradeIds: [],
+      },
+      {
+        id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb02',
+        championshipId: CHAMP,
+        driverId: D_ALO,
+        carId: CAR_RED,
+        number: 7,
+        abbreviation: 'ALO',
+        garageUpgradeIds: [],
+      },
+      {
+        id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb03',
+        championshipId: CHAMP,
+        driverId: D_HAM,
+        carId: CAR_BLUE,
+        number: 44,
+        abbreviation: 'HAM',
+        garageUpgradeIds: [],
+      },
+      {
+        id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb04',
+        championshipId: CHAMP,
+        driverId: D_VER,
+        carId: CAR_GREEN,
+        number: 33,
+        abbreviation: 'VER',
+        garageUpgradeIds: [],
       },
     ],
     races: [
@@ -167,7 +204,6 @@ export function createPreviewSeed(): PreviewDb {
         gridPosition: 2,
         position: 1,
         pointsAwarded: 9,
-        dnf: false,
       },
       {
         id: '77777777-7777-4777-8777-777777777702',
@@ -177,7 +213,6 @@ export function createPreviewSeed(): PreviewDb {
         gridPosition: 1,
         position: 2,
         pointsAwarded: 6,
-        dnf: false,
       },
       {
         id: '77777777-7777-4777-8777-777777777703',
@@ -187,7 +222,6 @@ export function createPreviewSeed(): PreviewDb {
         gridPosition: 3,
         position: 3,
         pointsAwarded: 4,
-        dnf: false,
       },
       {
         id: '77777777-7777-4777-8777-777777777704',
@@ -197,7 +231,6 @@ export function createPreviewSeed(): PreviewDb {
         gridPosition: 4,
         position: 4,
         pointsAwarded: 3,
-        dnf: false,
       },
       {
         id: '77777777-7777-4777-8777-777777777705',
@@ -207,7 +240,6 @@ export function createPreviewSeed(): PreviewDb {
         gridPosition: 2,
         position: 1,
         pointsAwarded: 9,
-        dnf: false,
       },
       {
         id: '77777777-7777-4777-8777-777777777706',
@@ -217,7 +249,6 @@ export function createPreviewSeed(): PreviewDb {
         gridPosition: 1,
         position: 2,
         pointsAwarded: 6,
-        dnf: false,
       },
       {
         id: '77777777-7777-4777-8777-777777777707',
@@ -227,7 +258,6 @@ export function createPreviewSeed(): PreviewDb {
         gridPosition: 3,
         position: 3,
         pointsAwarded: 4,
-        dnf: false,
       },
       {
         id: '77777777-7777-4777-8777-777777777708',
@@ -236,8 +266,7 @@ export function createPreviewSeed(): PreviewDb {
         carId: CAR_GREEN,
         gridPosition: 4,
         position: 4,
-        pointsAwarded: 0,
-        dnf: true,
+        pointsAwarded: 3,
       },
     ],
   };

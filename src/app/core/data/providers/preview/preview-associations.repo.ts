@@ -14,5 +14,12 @@ export class PreviewAssociationsRepo implements AssociationsRepository {
   }
   async remove(id: string): Promise<void> { this.store.update((db) => { db.associations = db.associations.filter((x) => x.id !== id); db.associationMembers = db.associationMembers.filter((x) => x.associationId !== id); }); }
   async listMemberIds(associationId: string): Promise<string[]> { return this.store.snapshot().associationMembers.filter((x) => x.associationId === associationId).map((x) => x.driverId); }
-  async setMembers(associationId: string, driverIds: string[]): Promise<void> { this.store.update((db) => { db.associationMembers = db.associationMembers.filter((x) => x.associationId !== associationId); db.associationMembers.push(...driverIds.map((driverId) => ({ associationId, driverId }))); }); }
+  async setMembers(associationId: string, driverIds: string[]): Promise<void> {
+    this.store.update((db) => {
+      const legendIds = new Set(db.drivers.filter((d) => d.isLegend).map((d) => d.id));
+      const allowed = [...new Set(driverIds)].filter((id) => !legendIds.has(id));
+      db.associationMembers = db.associationMembers.filter((x) => x.associationId !== associationId);
+      db.associationMembers.push(...allowed.map((driverId) => ({ associationId, driverId })));
+    });
+  }
 }

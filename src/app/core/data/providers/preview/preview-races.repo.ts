@@ -19,6 +19,7 @@ import {
   pointsForPosition as calculatePointsForPosition,
   validateResults as validateRaceResults,
 } from '../../shared/race-rules';
+import { resolveDriverLabel } from './preview-driver-label';
 import { newId, PreviewStore } from './preview-store';
 import { evaluateRaceBadges } from '../../shared/badge-evaluator';
 
@@ -107,6 +108,12 @@ export class PreviewRacesRepo implements RacesRepository {
     let saved!: Race;
     this.store.update((db) => {
       const existing = request.raceId ? db.races.find((x) => x.id === request.raceId) : undefined;
+      if (request.championshipId) {
+        // Championship races must come from a planned calendar slot.
+        if (!request.raceId) throw new Error('A planned race is required for championship races.');
+        if (!existing || existing.championshipId !== request.championshipId) throw new Error('Planned race not found.');
+        if (existing.status !== 'planned' && existing.status !== 'pre_race') throw new Error('Only planned races can be started.');
+      }
       saved = {
         ...(existing ?? { id: newId(), raceType: request.championshipId ? 'championship' : 'standalone', status: 'pre_race' as const, createdAt: new Date().toISOString() }),
         championshipId: request.championshipId ?? existing?.championshipId,
@@ -137,7 +144,7 @@ export class PreviewRacesRepo implements RacesRepository {
       db.results = db.results.filter((x) => x.raceId !== request.raceId);
       db.results.push(...request.results.map((x) => ({ id: newId(), raceId: request.raceId, ...x })));
       db.badgeAwards = db.badgeAwards.filter((x) => x.raceId !== request.raceId);
-      db.badgeAwards.push(...evaluateRaceBadges({ raceId: request.raceId, associationId: completed.associationId, telemetry: completed.telemetry ?? [], newId }));
+      db.badgeAwards.push(...evaluateRaceBadges({ raceId: request.raceId, associationId: completed.associationId, telemetry: completed.telemetry ?? [], results: request.results, newId }));
     });
     return completed;
   }
@@ -153,16 +160,18 @@ export class PreviewRacesRepo implements RacesRepository {
       this.provider.drivers.list(),
       this.completedResults(),
     ]);
+    const entries = this.store.snapshot().championshipEntries;
     return drivers
       .map((driver) => {
+        const label = resolveDriverLabel(driver, entries);
         const owned = results.filter((result) => result.driverId === driver.id);
-        const finishes = owned.filter((result) => !result.dnf);
+        const finishes = owned;
         return {
           driverId: driver.id,
           driverName: formatDriverName(driver),
           nickname: driver.nickname,
-          abbreviation: driver.abbreviation,
-          number: driver.number,
+          abbreviation: label.abbreviation,
+          number: label.number,
           isLegend: driver.isLegend,
           races: owned.length,
           wins: finishes.filter((result) => result.position === 1).length,
@@ -171,7 +180,6 @@ export class PreviewRacesRepo implements RacesRepository {
             (sum, result) => sum + result.pointsAwarded,
             0
           ),
-          dnfs: owned.filter((result) => result.dnf).length,
           avgFinish: finishes.length
             ? finishes.reduce((sum, result) => sum + result.position, 0) /
               finishes.length
@@ -192,7 +200,7 @@ export class PreviewRacesRepo implements RacesRepository {
     return cars
       .map((car) => {
         const owned = results.filter((result) => result.carId === car.id);
-        const finishes = owned.filter((result) => !result.dnf);
+        const finishes = owned;
         return {
           carId: car.id,
           carName: car.name,
@@ -200,7 +208,6 @@ export class PreviewRacesRepo implements RacesRepository {
           races: owned.length,
           wins: finishes.filter((result) => result.position === 1).length,
           podiums: finishes.filter((result) => result.position <= 3).length,
-          dnfs: owned.filter((result) => result.dnf).length,
         };
       })
       .sort((a, b) => b.wins - a.wins || b.races - a.races);
@@ -272,16 +279,14 @@ export class PreviewRacesRepo implements RacesRepository {
         finishCount: 0,
       };
       current.races += 1;
-      if (!row.dnf && row.position === 1) current.wins += 1;
-      if (!row.dnf && row.position <= 3) current.podiums += 1;
-      if (!row.dnf) {
-        current.finishSum += row.position;
-        current.finishCount += 1;
-        current.bestFinish =
-          current.bestFinish === null
-            ? row.position
-            : Math.min(current.bestFinish, row.position);
-      }
+      if (row.position === 1) current.wins += 1;
+      if (row.position <= 3) current.podiums += 1;
+      current.finishSum += row.position;
+      current.finishCount += 1;
+      current.bestFinish =
+        current.bestFinish === null
+          ? row.position
+          : Math.min(current.bestFinish, row.position);
       grouped.set(row.driverId, current);
     }
     return [...grouped.values()]
@@ -320,8 +325,8 @@ export class PreviewRacesRepo implements RacesRepository {
           losses: 0,
           draws: 0,
         };
-        const driverPosition = driverResult.dnf ? 999 : driverResult.position;
-        const opponentPosition = other.dnf ? 999 : other.position;
+        const driverPosition = driverResult.position;
+        const opponentPosition = other.position;
         if (driverPosition < opponentPosition) row.wins += 1;
         else if (driverPosition > opponentPosition) row.losses += 1;
         else row.draws += 1;
@@ -337,7 +342,6 @@ export class PreviewRacesRepo implements RacesRepository {
     driverId: string
   ): Promise<{ position: number; racedAt?: string; trackName?: string } | null> {
     const history = (await this.getDriverResultHistory(driverId))
-      .filter((result) => !result.dnf)
       .sort(
         (a, b) =>
           a.position - b.position ||
@@ -355,10 +359,9 @@ export class PreviewRacesRepo implements RacesRepository {
 
   pointsForPosition(
     pointSystem: number[],
-    position: number,
-    dnf: boolean
+    position: number
   ): number {
-    return calculatePointsForPosition(pointSystem, position, dnf);
+    return calculatePointsForPosition(pointSystem, position);
   }
 
   validateResults(
@@ -384,7 +387,9 @@ export class PreviewRacesRepo implements RacesRepository {
       gridPosition: result.gridPosition,
       position: result.position,
       pointsAwarded: result.pointsAwarded,
-      dnf: result.dnf,
+      gapTurns: result.gapTurns,
+      driverOfTheDay: result.driverOfTheDay,
+      loadout: result.loadout,
     }));
   }
 
@@ -452,7 +457,6 @@ export class PreviewRacesRepo implements RacesRepository {
         gridPosition: result.gridPosition,
         position: result.position,
         pointsAwarded: result.pointsAwarded,
-        dnf: result.dnf,
       });
     }
     return history.sort((a, b) =>
@@ -489,16 +493,14 @@ export class PreviewRacesRepo implements RacesRepository {
       };
       current.races += 1;
       current.points += row.pointsAwarded;
-      if (!row.dnf && row.position === 1) current.wins += 1;
-      if (!row.dnf && row.position <= 3) current.podiums += 1;
-      if (!row.dnf) {
-        current.finishSum += row.position;
-        current.finishCount += 1;
-        current.bestFinish =
-          current.bestFinish === null
-            ? row.position
-            : Math.min(current.bestFinish, row.position);
-      }
+      if (row.position === 1) current.wins += 1;
+      if (row.position <= 3) current.podiums += 1;
+      current.finishSum += row.position;
+      current.finishCount += 1;
+      current.bestFinish =
+        current.bestFinish === null
+          ? row.position
+          : Math.min(current.bestFinish, row.position);
       grouped.set(key.id, current);
     }
     return [...grouped.values()]

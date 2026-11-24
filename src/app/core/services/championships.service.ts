@@ -1,8 +1,11 @@
 import { inject, Injectable } from '@angular/core';
+import { ChampionshipEntryInput } from '../data/data-provider';
 import { DATA_PROVIDER } from '../data/data-provider.token';
 import {
   Championship,
+  ChampionshipEntry,
   ChampionshipProgression,
+  ConstructorStandingRow,
   CreateChampionshipRequest,
   GlobalChampionRow,
   PlannedRoundInput,
@@ -86,6 +89,16 @@ export class ChampionshipsService {
     return this.provider.championships.getStandings(championshipId);
   }
 
+  getConstructorStandings(
+    championshipId: string
+  ): Promise<ConstructorStandingRow[]> {
+    return this.provider.championships.getConstructorStandings(championshipId);
+  }
+
+  computeTitleFight(championshipId: string): Promise<StandingRow[]> {
+    return this.provider.championships.computeTitleFight(championshipId);
+  }
+
   getProgression(championshipId: string): Promise<ChampionshipProgression> {
     return this.provider.championships.getProgression(championshipId);
   }
@@ -116,15 +129,44 @@ export class ChampionshipsService {
     return this.provider.championships.getCarTitles(carId);
   }
 
-  applyTitleFight(
-    standings: StandingRow[],
-    pointSystem: number[],
-    remainingPlanned: number
-  ): StandingRow[] {
-    return this.provider.championships.applyTitleFight(
-      standings,
-      pointSystem,
-      remainingPlanned
+  listCars(championshipId: string): Promise<string[]> {
+    return this.provider.championships.listCars(championshipId);
+  }
+
+  listEntries(championshipId: string): Promise<ChampionshipEntry[]> {
+    return this.provider.championships.listEntries(championshipId);
+  }
+
+  upsertEntry(
+    championshipId: string,
+    input: ChampionshipEntryInput
+  ): Promise<ChampionshipEntry> {
+    return this.provider.championships.upsertEntry(championshipId, input);
+  }
+
+  removeEntry(championshipId: string, entryId: string): Promise<void> {
+    return this.provider.championships.removeEntry(championshipId, entryId);
+  }
+
+  setEntryUpgrades(
+    championshipId: string,
+    entryId: string,
+    garageUpgradeIds: string[]
+  ): Promise<ChampionshipEntry> {
+    return this.provider.championships.setEntryUpgrades(
+      championshipId,
+      entryId,
+      garageUpgradeIds
+    );
+  }
+
+  getPreviousSeriesChampionDriverId(
+    seriesId: string,
+    beforeEditionNumber: number
+  ): Promise<string | null> {
+    return this.provider.championships.getPreviousSeriesChampionDriverId(
+      seriesId,
+      beforeEditionNumber
     );
   }
 }

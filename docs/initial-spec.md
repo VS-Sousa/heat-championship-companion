@@ -120,7 +120,6 @@ create table public.race_results (
   grid_position int not null,  -- Qualifying / Starting Grid Position
   position int not null,       -- Final Finishing Position
   points_awarded int default 0 not null,
-  dnf boolean default false,   -- Did Not Finish (Engine blown / retired)
   
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
@@ -216,7 +215,6 @@ export interface RaceResultPayload {
   gridPosition: number;
   position: number;
   pointsAwarded: number;
-  dnf: boolean;
 }
 
 export interface LogRaceRequest {
@@ -245,7 +243,7 @@ export interface LogRaceRequest {
 ### 5.3 [UC-03] Grid & Finishing Position Validation
 * The race creation UI must implement front-end validation ensuring that:
   1. No two drivers share the same `grid_position`.
-  2. No two drivers share the same `position` (unless DNF rules apply, but grid position must remain unique).
+  2. No two drivers share the same `position`.
   3. No single driver or car is entered more than once in the same race.
 
 ---
@@ -260,5 +258,4 @@ export interface LogRaceRequest {
 
 ### 6.2 Edge Cases to Handle in Code
 * **Offline / Invalid Credentials:** Show user-friendly error banners on connection failure without freezing the UI.
-* **Partial Races (DNFs):** Drivers marked as `dnf = true` still record their `grid_position` and participation stats, but score zero points unless specified by custom league rules.
 * **Fixed Legend Binding:** Handle cases where a Legend driver's assigned car is deleted or missing gracefully in UI dropdowns.

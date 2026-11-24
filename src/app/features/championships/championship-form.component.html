@@ -1,0 +1,180 @@
+<div class="heat-page-header">
+  <div class="min-w-0">
+    <p class="heat-subtitle">{{ 'championships.eyebrow' | t }}</p>
+    <h1 class="heat-title">
+      {{ (isEdit ? 'championships.edit' : 'championships.add') | t }}
+    </h1>
+  </div>
+  <a routerLink="/championships" class="heat-btn-secondary w-full text-center sm:w-auto">
+    {{ 'championships.back' | t }}
+  </a>
+</div>
+
+@if (error()) {
+  <div class="mb-4 rounded-sm border border-heat-red/40 bg-heat-red/10 px-4 py-3">{{ error() }}</div>
+}
+
+<section class="heat-panel p-4 sm:p-5">
+  @if (loading()) {
+    <p class="text-heat-muted">{{ 'championships.loading' | t }}</p>
+  } @else if (!notFound()) {
+    <form class="space-y-4" (ngSubmit)="save()">
+      <div>
+        <label class="heat-label" for="cName">
+          {{ 'championships.name' | t }} <span class="text-heat-red">*</span>
+        </label>
+        <input
+          id="cName"
+          class="heat-input"
+          name="name"
+          required
+          [ngModel]="name()"
+          (ngModelChange)="name.set($event)"
+        />
+      </div>
+
+      <div>
+        <label class="heat-label" for="cScoring">
+          {{ 'championships.scoringSystem' | t }} <span class="text-heat-red">*</span>
+        </label>
+        <app-searchable-select
+          inputId="cScoring"
+          name="scoringSystemId"
+          [ngModel]="scoringSystemId()"
+          (ngModelChange)="scoringSystemId.set($event)"
+          [options]="scoringSystemOptions()"
+        />
+        @if (selectedScoringSystem(); as scoring) {
+          <div class="mt-2 rounded-sm border border-heat-border bg-heat-steel/40 p-3">
+            <p class="heat-label mb-1">{{ 'championships.scoringDetails' | t }}</p>
+            <p class="font-mono text-xs text-heat-muted">{{ 'scoring.points' | t }}</p>
+            <p class="break-words font-mono text-sm">{{ scoring.points.join(' · ') }}</p>
+            <p class="mt-2 text-xs uppercase tracking-[0.16em] text-heat-muted">
+              FL +{{ scoring.bonusFastestLap }} · Pole +{{ scoring.bonusPole }} · DOTD +{{
+                scoring.bonusDriverOfDay
+              }}
+            </p>
+          </div>
+        }
+      </div>
+
+      <div>
+        <p class="heat-label">
+          {{ 'championships.cars' | t }}
+          @if (!isEdit) {
+            <span class="text-heat-red">*</span>
+          }
+        </p>
+        @if (isEdit) {
+          <p class="mb-2 text-xs text-heat-muted">{{ 'championships.carsLocked' | t }}</p>
+        }
+        <div class="flex flex-wrap gap-2">
+          @for (car of cars(); track car.id) {
+            <label
+              class="flex items-center gap-2 rounded-sm border px-2 py-1 text-xs uppercase tracking-[0.1em]"
+              [class.cursor-pointer]="!isEdit"
+              [class.border-heat-yellow]="isCarSelected(car.id)"
+              [class.text-heat-yellow]="isCarSelected(car.id)"
+              [class.border-heat-border]="!isCarSelected(car.id)"
+              [class.text-heat-muted]="!isCarSelected(car.id)"
+            >
+              <input
+                type="checkbox"
+                [name]="'car-' + car.id"
+                [checked]="isCarSelected(car.id)"
+                [disabled]="isEdit"
+                (change)="toggleCar(car.id, $any($event.target).checked)"
+              />
+              <span
+                class="inline-block h-2.5 w-2.5 rounded-full border border-heat-border"
+                [style.background]="car.colorHex"
+              ></span>
+              {{ car.name }}
+            </label>
+          } @empty {
+            <p class="text-sm text-heat-muted">{{ 'championships.noCars' | t }}</p>
+          }
+        </div>
+      </div>
+
+      @if (!isEdit) {
+        <div>
+          <label class="heat-label" for="succession">{{ 'championships.successionOf' | t }}</label>
+          <app-searchable-select
+            inputId="succession"
+            name="successionOfId"
+            [ngModel]="successionOfId()"
+            (ngModelChange)="successionOfId.set($event)"
+            [options]="successionOptions()"
+          />
+        </div>
+
+        <div class="space-y-3">
+          <div class="flex items-center justify-between gap-2">
+            <p class="heat-label mb-0">{{ 'championships.calendar' | t }}</p>
+            <button type="button" class="heat-btn-ghost text-sm" (click)="addRound()">
+              {{ 'championships.addRound' | t }}
+            </button>
+          </div>
+          @for (round of calendar(); track $index; let i = $index) {
+            <div class="rounded-sm border border-heat-border p-3">
+              <p class="mb-2 font-mono text-xs text-heat-yellow">
+                {{ 'championships.round' | t }} {{ round.roundNumber }}
+              </p>
+              <app-searchable-select
+                class="mb-2"
+                [name]="'track-' + i"
+                [ngModel]="round.trackId"
+                (ngModelChange)="setRoundTrack(i, $event)"
+                [options]="trackOptions()"
+              />
+              <div class="flex gap-2">
+                <button type="button" class="heat-btn-secondary text-sm" (click)="openRaffle(i)">
+                  {{ 'raffle.drawTrack' | t }}
+                </button>
+                <button
+                  type="button"
+                  class="heat-btn-ghost text-sm text-heat-red"
+                  (click)="removeRound(i)"
+                  [disabled]="calendar().length <= 1"
+                >
+                  {{ 'common.remove' | t }}
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <div class="space-y-2 text-sm uppercase tracking-[0.14em] text-heat-muted">
+        <p class="heat-label mb-0">{{ 'championships.modules' | t }}</p>
+        <label class="flex items-center gap-2">
+          <input
+            type="checkbox"
+            name="useGarage"
+            [ngModel]="useGarage()"
+            (ngModelChange)="useGarage.set($event)"
+          />
+          {{ 'championships.garage' | t }}
+        </label>
+      </div>
+
+      <div class="flex gap-2">
+        <button type="submit" class="heat-btn-primary" [disabled]="saving()">
+          {{ 'championships.save' | t }}
+        </button>
+        <a routerLink="/championships" class="heat-btn-secondary">
+          {{ 'common.cancel' | t }}
+        </a>
+      </div>
+    </form>
+  }
+</section>
+
+@if (raffleRoundIndex() !== null) {
+  <app-track-raffle-modal
+    [tracks]="tracks()"
+    (selected)="onTrackRaffled($event)"
+    (closed)="closeRaffle()"
+  />
+}

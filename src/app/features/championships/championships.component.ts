@@ -1,59 +1,27 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
-import { AssociationsService } from '../../core/services/associations.service';
-import { ScoringSystemsService } from '../../core/services/scoring-systems.service';
-import {
-  Association,
-  Championship,
-  PlannedRoundInput,
-  ScoringSystem,
-  StandingRow,
-  Track,
-} from '../../core/models/domain.models';
+import { Router, RouterLink } from '@angular/router';
+import { Championship, StandingRow } from '../../core/models/domain.models';
 import { ChampionshipsService } from '../../core/services/championships.service';
-import { TracksService } from '../../core/services/tracks.service';
 import { SessionService } from '../../core/services/session.service';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
-import { TrackRaffleModalComponent } from '../../shared/components/track-raffle/track-raffle-modal.component';
-import { SearchableSelectComponent } from '../../shared/components/searchable-select/searchable-select.component';
 import { formatDriverName } from '../../core/utils/driver-display';
-import { I18nService } from '../../core/i18n/i18n.service';
-
-const DEFAULT_POINTS = '10,8,6,5,4,3,2,1';
-
-interface CalendarDraft {
-  roundNumber: number;
-  trackId: string;
-}
 
 @Component({
   selector: 'app-championships',
   standalone: true,
-  imports: [
-    FormsModule,
-    RouterLink,
-    TranslatePipe,
-    TrackRaffleModalComponent,
-    SearchableSelectComponent,
-  ],
+  imports: [RouterLink, TranslatePipe],
   templateUrl: './championships.component.html',
   styleUrl: './championships.component.css',
 })
 export class ChampionshipsComponent implements OnInit {
   private readonly championshipsService = inject(ChampionshipsService);
-  private readonly tracksService = inject(TracksService);
-  private readonly associationsService = inject(AssociationsService);
-  private readonly scoringSystemsService = inject(ScoringSystemsService);
-  private readonly i18n = inject(I18nService);
+  private readonly router = inject(Router);
   readonly session = inject(SessionService);
 
   readonly championships = signal<Championship[]>([]);
-  readonly tracks = signal<Track[]>([]);
   readonly standings = signal<StandingRow[]>([]);
   readonly error = signal<string | null>(null);
   readonly loading = signal(true);
-  readonly formOpen = signal(false);
 
   readonly sortedChampionships = computed(() => {
     const list = [...this.championships()];
@@ -65,63 +33,7 @@ export class ChampionshipsComponent implements OnInit {
     });
   });
 
-  readonly successionOptions = computed(() => {
-    this.i18n.lang();
-    return [
-      { value: '', label: this.i18n.t('championships.newSeries') },
-      ...this.championships().map((c) => ({
-        value: c.id,
-        label: `${c.name} · E${c.editionNumber}`,
-      })),
-    ];
-  });
-
-  readonly trackOptions = computed(() => {
-    this.i18n.lang();
-    return [
-      { value: '', label: this.i18n.t('championships.trackOptional') },
-      ...this.tracks().map((track) => ({
-        value: track.id,
-        label: track.name,
-      })),
-    ];
-  });
-
-  readonly associations = signal<Association[]>([]);
-  readonly scoringSystems = signal<ScoringSystem[]>([]);
-
-  readonly associationOptions = computed(() => {
-    this.i18n.lang();
-    return [
-      { value: '', label: this.i18n.t('championships.noneOption') },
-      ...this.associations().map((a) => ({
-        value: a.id,
-        label: `${a.name} (${a.abbreviation})`,
-      })),
-    ];
-  });
-
-  readonly scoringSystemOptions = computed(() => {
-    this.i18n.lang();
-    return [
-      { value: '', label: this.i18n.t('championships.noneOption') },
-      ...this.scoringSystems().map((s) => ({ value: s.id, label: s.name })),
-    ];
-  });
-
-  editingId: string | null = null;
   viewingId: string | null = null;
-  associationId = '';
-  scoringSystemId = '';
-  name = '';
-  pointSystemText = DEFAULT_POINTS;
-  useGarage = false;
-  useEvents = false;
-  usePress = false;
-  useSponsorship = false;
-  successionOfId = '';
-  calendar: CalendarDraft[] = [{ roundNumber: 1, trackId: '' }];
-  raffleRoundIndex: number | null = null;
 
   readonly formatDriverName = formatDriverName;
 
@@ -133,17 +45,7 @@ export class ChampionshipsComponent implements OnInit {
     this.loading.set(true);
     this.error.set(null);
     try {
-      const [championships, tracks, associations, scoringSystems] =
-        await Promise.all([
-          this.championshipsService.list(),
-          this.tracksService.list(),
-          this.associationsService.list(),
-          this.scoringSystemsService.list(),
-        ]);
-      this.championships.set(championships);
-      this.tracks.set(tracks);
-      this.associations.set(associations);
-      this.scoringSystems.set(scoringSystems);
+      this.championships.set(await this.championshipsService.list());
     } catch (err) {
       this.error.set(
         err instanceof Error ? err.message : 'Failed to load championships.'
@@ -153,75 +55,12 @@ export class ChampionshipsComponent implements OnInit {
     }
   }
 
-  resetForm(): void {
-    this.editingId = null;
-    this.name = '';
-    this.associationId = '';
-    this.scoringSystemId = '';
-    this.pointSystemText = DEFAULT_POINTS;
-    this.useGarage = false;
-    this.useEvents = false;
-    this.usePress = false;
-    this.useSponsorship = false;
-    this.successionOfId = '';
-    this.calendar = [{ roundNumber: 1, trackId: '' }];
-    this.raffleRoundIndex = null;
-  }
-
   startCreate(): void {
-    this.resetForm();
-    this.formOpen.set(true);
+    void this.router.navigate(['/championships', 'new']);
   }
 
   startEdit(c: Championship): void {
-    this.editingId = c.id;
-    this.name = c.name;
-    this.associationId = c.associationId ?? '';
-    this.scoringSystemId = c.scoringSystemId ?? '';
-    this.pointSystemText = c.pointSystem.join(',');
-    this.useGarage = c.useGarage;
-    this.useEvents = c.useEvents;
-    this.usePress = c.usePress;
-    this.useSponsorship = c.useSponsorship;
-    this.successionOfId = '';
-    this.calendar = [{ roundNumber: 1, trackId: '' }];
-    this.raffleRoundIndex = null;
-    this.formOpen.set(true);
-  }
-
-  closeForm(): void {
-    this.formOpen.set(false);
-    this.resetForm();
-  }
-
-  addRound(): void {
-    this.calendar = [
-      ...this.calendar,
-      { roundNumber: this.calendar.length + 1, trackId: '' },
-    ];
-  }
-
-  removeRound(index: number): void {
-    if (this.calendar.length <= 1) return;
-    this.calendar = this.calendar
-      .filter((_, i) => i !== index)
-      .map((round, i) => ({ ...round, roundNumber: i + 1 }));
-  }
-
-  openRaffle(index: number): void {
-    this.raffleRoundIndex = index;
-  }
-
-  closeRaffle(): void {
-    this.raffleRoundIndex = null;
-  }
-
-  onTrackRaffled(trackId: string): void {
-    if (this.raffleRoundIndex === null) return;
-    this.calendar = this.calendar.map((round, i) =>
-      i === this.raffleRoundIndex ? { ...round, trackId } : round
-    );
-    this.raffleRoundIndex = null;
+    void this.router.navigate(['/championships', c.id, 'edit']);
   }
 
   async viewStandings(c: Championship): Promise<void> {
@@ -243,78 +82,6 @@ export class ChampionshipsComponent implements OnInit {
     } catch (err) {
       this.error.set(err instanceof Error ? err.message : 'Finalize failed.');
     }
-  }
-
-  async save(): Promise<void> {
-    this.error.set(null);
-    try {
-      const pointSystem = this.pointSystemText
-        .split(',')
-        .map((v) => Number(v.trim()))
-        .filter((n) => !Number.isNaN(n));
-
-      if (!this.name.trim()) {
-        throw new Error('Name is required.');
-      }
-      if (!pointSystem.length) {
-        throw new Error('Point system must include at least one value.');
-      }
-
-      const season = await this.resolveSeason(this.editingId, this.successionOfId);
-
-      if (this.editingId) {
-        await this.championshipsService.update(this.editingId, {
-          name: this.name.trim(),
-          season,
-          pointSystem,
-          associationId: this.associationId || undefined,
-          scoringSystemId: this.scoringSystemId || undefined,
-          useGarage: this.useGarage,
-          useEvents: this.useEvents,
-          usePress: this.usePress,
-          useSponsorship: this.useSponsorship,
-          isActive: true,
-        });
-      } else {
-        const calendar: PlannedRoundInput[] = this.calendar.map((round) => ({
-          roundNumber: round.roundNumber,
-          trackId: round.trackId || undefined,
-        }));
-        await this.championshipsService.createWithCalendar({
-          name: this.name.trim(),
-          season,
-          pointSystem,
-          associationId: this.associationId || undefined,
-          scoringSystemId: this.scoringSystemId || undefined,
-          useGarage: this.useGarage,
-          useEvents: this.useEvents,
-          usePress: this.usePress,
-          useSponsorship: this.useSponsorship,
-          successionOfId: this.successionOfId || undefined,
-          calendar,
-        });
-      }
-      this.closeForm();
-      await this.reload();
-    } catch (err) {
-      this.error.set(err instanceof Error ? err.message : 'Save failed.');
-    }
-  }
-
-  private async resolveSeason(
-    editingId: string | null,
-    successionOfId: string
-  ): Promise<string> {
-    if (editingId) {
-      const existing = this.championships().find((c) => c.id === editingId);
-      return existing?.season || String(new Date().getFullYear());
-    }
-    if (successionOfId) {
-      const previous = this.championships().find((c) => c.id === successionOfId);
-      const year = Number(previous?.season);
-      if (previous && !Number.isNaN(year)) return String(year + 1);
-    }
-    return String(new Date().getFullYear());
   }
 
   async remove(c: Championship): Promise<void> {

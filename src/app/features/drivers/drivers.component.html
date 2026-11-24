@@ -34,11 +34,7 @@
               [routerLink]="['/drivers', driver.id]"
               class="block font-display text-xl tracking-wider hover:text-heat-yellow"
             >
-              <span class="font-mono text-heat-yellow"
-                >#{{ driver.number | number: '2.0-0' }}</span
-              >
               {{ formatDriverName(driver) }}
-              <span class="text-sm text-heat-muted">({{ driver.abbreviation }})</span>
             </a>
             <p class="text-xs uppercase tracking-[0.16em] text-heat-muted">
               {{ driver.isLegend ? ('drivers.legend' | t) : ('drivers.human' | t) }}
@@ -99,30 +95,6 @@
         <div>
           <label class="heat-label" for="nickname">{{ 'drivers.nickname' | t }}</label>
           <input id="nickname" class="heat-input" name="nickname" [(ngModel)]="nickname" />
-        </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="heat-label" for="abbr">{{ 'drivers.abbr' | t }}</label>
-            <input
-              id="abbr"
-              class="heat-input uppercase"
-              name="abbreviation"
-              maxlength="3"
-              [(ngModel)]="abbreviation"
-            />
-          </div>
-          <div>
-            <label class="heat-label" for="number">{{ 'drivers.number' | t }}</label>
-            <input
-              id="number"
-              class="heat-input"
-              type="number"
-              min="0"
-              max="99"
-              name="number"
-              [(ngModel)]="number"
-            />
-          </div>
         </div>
         <label class="flex items-center gap-2 text-sm uppercase tracking-[0.14em] text-heat-muted">
           <input type="checkbox" name="isLegend" [(ngModel)]="isLegend" />

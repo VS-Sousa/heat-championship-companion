@@ -50,7 +50,6 @@ export interface Car {
 export interface Association {
   id: string;
   name: string;
-  abbreviation: string;
 }
 
 export interface ScoringSystem {
@@ -63,28 +62,24 @@ export interface ScoringSystem {
   isBuiltin: boolean;
 }
 
-export type GarageUpgradeCategory =
-  | 'engine'
-  | 'suspension'
-  | 'brakes'
-  | 'tires'
-  | 'cooling'
-  | 'other';
+export type GarageUpgradeSet =
+  | 'basegame'
+  | 'heavy_rain'
+  | 'tunnel_vision'
+  | 'rocky_roads'
+  | 'homebrew';
 
 export interface GarageUpgrade {
   id: string;
   name: string;
-  category: GarageUpgradeCategory;
-  heatCost: number;
-  effect: string;
+  description: string;
+  set: GarageUpgradeSet;
 }
 
 export interface Driver {
   id: string;
   name: string;
   nickname?: string;
-  abbreviation: string;
-  number: number;
   isLegend: boolean;
   fixedCarId?: string;
   /** Default car when logging a race (non-legend or when not locked). */
@@ -120,8 +115,27 @@ export interface Championship {
   useSponsorship: boolean;
   isActive: boolean;
   finishedAt?: string;
-  associationId?: string;
-  scoringSystemId?: string;
+  scoringSystemId: string;
+}
+
+export interface ChampionshipEntry {
+  id: string;
+  championshipId: string;
+  driverId: string;
+  carId: string;
+  number: number;
+  abbreviation: string;
+  garageUpgradeIds?: string[];
+}
+
+export interface ConstructorStandingRow {
+  carId: string;
+  carName: string;
+  colorHex: string;
+  points: number;
+  wins: number;
+  podiums: number;
+  races: number;
 }
 
 export type RaceStage = 'pre_race' | 'in_race' | 'post_race';
@@ -151,6 +165,9 @@ export interface TelemetryEvent {
 export interface RaceEntry {
   driverId: string;
   carId: string;
+  /** Standalone races only; championship races use ChampionshipEntry. */
+  number?: number;
+  abbreviation?: string;
   gridPosition: number;
   loadout: string[];
 }
@@ -184,7 +201,6 @@ export interface RaceResult {
   gridPosition: number;
   position: number;
   pointsAwarded: number;
-  dnf: boolean;
   gapTurns?: number;
   driverOfTheDay?: boolean;
   loadout?: string[];
@@ -196,7 +212,6 @@ export interface RaceResultPayload {
   gridPosition: number;
   position: number;
   pointsAwarded: number;
-  dnf: boolean;
   gapTurns?: number;
   driverOfTheDay?: boolean;
   loadout?: string[];
@@ -258,8 +273,8 @@ export interface PlannedRoundInput {
 export interface CreateChampionshipRequest {
   name: string;
   season: string;
-  associationId?: string;
-  scoringSystemId?: string;
+  scoringSystemId: string;
+  carIds: string[];
   pointSystem: number[];
   useGarage: boolean;
   useEvents: boolean;
@@ -308,6 +323,9 @@ export interface StandingRow {
   points: number;
   wins: number;
   podiums: number;
+  p2Count: number;
+  p3Count: number;
+  lastWinRound?: number;
   races: number;
   inTitleFight?: boolean;
 }
@@ -331,8 +349,6 @@ export interface ProgressionDriverSeries {
   pointsAfterRound: number[];
   /** Race finish position per completed round; null if the driver did not take part. */
   finishPositionByRound: Array<number | null>;
-  /** DNF flag aligned with finishPositionByRound. */
-  dnfByRound: boolean[];
 }
 
 export interface ChampionshipProgression {
@@ -350,7 +366,6 @@ export interface RaceResultDetailRow {
   gridPosition: number;
   position: number;
   pointsAwarded: number;
-  dnf: boolean;
 }
 
 export interface DriverStatRow {
@@ -364,7 +379,6 @@ export interface DriverStatRow {
   wins: number;
   podiums: number;
   points: number;
-  dnfs: number;
   avgFinish: number | null;
 }
 
@@ -375,7 +389,6 @@ export interface CarStatRow {
   races: number;
   wins: number;
   podiums: number;
-  dnfs: number;
 }
 
 export interface SeriesChampionRow {
@@ -431,7 +444,6 @@ export interface ResultHistoryRow {
   gridPosition: number;
   position: number;
   pointsAwarded: number;
-  dnf: boolean;
 }
 
 export interface HeadToHeadRow {

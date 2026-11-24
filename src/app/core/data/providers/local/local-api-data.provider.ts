@@ -7,8 +7,10 @@ import {
   Car,
   CarStatRow,
   Championship,
+  ChampionshipEntry,
   ChampionshipProgression,
   CompletePlannedRaceRequest,
+  ConstructorStandingRow,
   CreateChampionshipRequest,
   CompletePostRaceRequest,
   Driver,
@@ -35,6 +37,7 @@ import {
   CarsRepository,
   AssociationsRepository,
   BadgesRepository,
+  ChampionshipEntryInput,
   ChampionshipUpdateInput,
   ChampionshipsRepository,
   DataProvider,
@@ -282,21 +285,65 @@ class LocalChampionshipsRepo implements ChampionshipsRepository {
     return this.api.get<TitleWin[]>(`/championships/titles/car/${carId}`);
   }
 
-  applyTitleFight(
-    standings: StandingRow[],
-    pointSystem: number[],
-    remainingPlanned: number
-  ): StandingRow[] {
-    if (!standings.length) return standings;
-    const maxPts = Math.max(...pointSystem, 0);
-    const leaderPoints = standings[0].points;
-    return standings.map((row) => ({
-      ...row,
-      inTitleFight:
-        remainingPlanned === 0
-          ? row.points === leaderPoints
-          : row.points + remainingPlanned * maxPts >= leaderPoints,
-    }));
+  getConstructorStandings(
+    championshipId: string
+  ): Promise<ConstructorStandingRow[]> {
+    return this.api.get<ConstructorStandingRow[]>(
+      `/championships/${championshipId}/constructor-standings`
+    );
+  }
+
+  computeTitleFight(championshipId: string): Promise<StandingRow[]> {
+    return this.api.get<StandingRow[]>(
+      `/championships/${championshipId}/title-fight`
+    );
+  }
+
+  async getPreviousSeriesChampionDriverId(
+    seriesId: string,
+    beforeEditionNumber: number
+  ): Promise<string | null> {
+    const res = await this.api.get<{ driverId: string | null }>(
+      `/championships/series/${seriesId}/previous-champion?beforeEdition=${beforeEditionNumber}`
+    );
+    return res?.driverId ?? null;
+  }
+
+  listCars(championshipId: string): Promise<string[]> {
+    return this.api.get<string[]>(`/championships/${championshipId}/cars`);
+  }
+
+  listEntries(championshipId: string): Promise<ChampionshipEntry[]> {
+    return this.api.get<ChampionshipEntry[]>(
+      `/championships/${championshipId}/entries`
+    );
+  }
+
+  upsertEntry(
+    championshipId: string,
+    input: ChampionshipEntryInput
+  ): Promise<ChampionshipEntry> {
+    return this.api.put<ChampionshipEntry>(
+      `/championships/${championshipId}/entries`,
+      input
+    );
+  }
+
+  removeEntry(championshipId: string, entryId: string): Promise<void> {
+    return this.api.delete(
+      `/championships/${championshipId}/entries/${entryId}`
+    );
+  }
+
+  setEntryUpgrades(
+    championshipId: string,
+    entryId: string,
+    garageUpgradeIds: string[]
+  ): Promise<ChampionshipEntry> {
+    return this.api.put<ChampionshipEntry>(
+      `/championships/${championshipId}/entries/${entryId}/upgrades`,
+      { garageUpgradeIds }
+    );
   }
 }
 

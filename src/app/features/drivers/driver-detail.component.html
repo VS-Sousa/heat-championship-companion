@@ -9,7 +9,7 @@
 } @else if (driver()) {
   <div class="mb-6 min-w-0 sm:mb-8">
     <p class="heat-subtitle">
-      #{{ driver()!.number }} · {{ driver()!.abbreviation }}
+      {{ (driver()!.isLegend ? 'drivers.legend' : 'drivers.human') | t }}
     </p>
     <h1 class="heat-title break-words">{{ formatDriverName(driver()!) }}</h1>
     @if (best()) {
@@ -125,7 +125,7 @@
                   </a>
                 </td>
                 <td class="py-2 font-mono">{{ row.gridPosition }}</td>
-                <td class="py-2 font-mono">{{ row.dnf ? 'DNF' : row.position }}</td>
+                <td class="py-2 font-mono">{{ row.position }}</td>
                 <td class="py-2 font-mono">{{ row.pointsAwarded }}</td>
               </tr>
             }

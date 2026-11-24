@@ -97,16 +97,8 @@ export class RacesService {
     return this.provider.races.getDriverBestFinish(driverId);
   }
 
-  pointsForPosition(
-    pointSystem: number[],
-    position: number,
-    dnf: boolean
-  ): number {
-    return this.provider.races.pointsForPosition(
-      pointSystem,
-      position,
-      dnf
-    );
+  pointsForPosition(pointSystem: number[], position: number): number {
+    return this.provider.races.pointsForPosition(pointSystem, position);
   }
 
   validateResults(

@@ -22,6 +22,10 @@ import {
   validateResults as validateRaceResults,
 } from '../../shared/race-rules';
 import { evaluateRaceBadges } from '../../shared/badge-evaluator';
+import {
+  fallbackDriverIdentity,
+  loadLatestDriverIdentities,
+} from './supabase-driver-identity';
 
 export class SupabaseRacesRepo implements RacesRepository {
   constructor(
@@ -140,8 +144,18 @@ export class SupabaseRacesRepo implements RacesRepository {
       raced_at: request.racedAt ?? null, entries: request.entries, status: 'pre_race', stage: 'pre_race',
       race_type: request.championshipId ? 'championship' : 'standalone',
     };
+    if (request.championshipId && !request.raceId) {
+      throw new Error('A planned race is required for championship races.');
+    }
     const table = this.supabase.getClient().from('races');
-    const query = request.raceId ? table.update(row).eq('id', request.raceId).in('status', ['planned', 'pre_race']) : table.insert(row);
+    let query;
+    if (request.raceId) {
+      let update = table.update(row).eq('id', request.raceId).in('status', ['planned', 'pre_race']);
+      if (request.championshipId) update = update.eq('championship_id', request.championshipId);
+      query = update;
+    } else {
+      query = table.insert(row);
+    }
     const { data, error } = await query.select('*').single();
     if (error) throw new Error(error.message);
     return mapRace(data as Record<string, unknown>);
@@ -158,7 +172,7 @@ export class SupabaseRacesRepo implements RacesRepository {
     const current = await this.getRace(request.raceId); if (!current) throw new Error('Race not found.');
     await client.from('race_results').delete().eq('race_id', request.raceId);
     await this.insertResults(request.raceId, request.results);
-    const awards = evaluateRaceBadges({ raceId: request.raceId, associationId: current.associationId, telemetry: current.telemetry ?? [], newId: () => crypto.randomUUID() });
+    const awards = evaluateRaceBadges({ raceId: request.raceId, associationId: current.associationId, telemetry: current.telemetry ?? [], results: request.results, newId: () => crypto.randomUUID() });
     await client.from('badge_awards').delete().eq('race_id', request.raceId);
     if (awards.length) {
       const { error } = await client.from('badge_awards').insert(awards.map((x) => ({ id: x.id, badge_id: x.badgeId, driver_id: x.driverId, race_id: x.raceId, association_id: x.associationId, awarded_at: x.awardedAt })));
@@ -173,10 +187,11 @@ export class SupabaseRacesRepo implements RacesRepository {
   }
 
   async getDriverStats(): Promise<DriverStatRow[]> {
-    const [drivers, completedRaceIds, results] = await Promise.all([
+    const [drivers, completedRaceIds, results, identities] = await Promise.all([
       this.provider.drivers.list(),
       this.listCompletedRaceIds(),
       this.listAllResults(),
+      loadLatestDriverIdentities(this.supabase),
     ]);
     const completed = new Set(completedRaceIds);
 
@@ -185,24 +200,24 @@ export class SupabaseRacesRepo implements RacesRepository {
         const owned = results.filter(
           (r) => r.driverId === driver.id && completed.has(r.raceId)
         );
-        const finishes = owned.filter((r) => !r.dnf);
         const avgFinish =
-          finishes.length > 0
-            ? finishes.reduce((sum, r) => sum + r.position, 0) / finishes.length
+          owned.length > 0
+            ? owned.reduce((sum, r) => sum + r.position, 0) / owned.length
             : null;
+        const identity =
+          identities.get(driver.id) ?? fallbackDriverIdentity(driver.name);
 
         return {
           driverId: driver.id,
           driverName: formatDriverName(driver),
           nickname: driver.nickname,
-          abbreviation: driver.abbreviation,
-          number: driver.number,
+          abbreviation: identity.abbreviation,
+          number: identity.number,
           isLegend: driver.isLegend,
           races: owned.length,
-          wins: finishes.filter((r) => r.position === 1).length,
-          podiums: finishes.filter((r) => r.position <= 3).length,
+          wins: owned.filter((r) => r.position === 1).length,
+          podiums: owned.filter((r) => r.position <= 3).length,
           points: owned.reduce((sum, r) => sum + r.pointsAwarded, 0),
-          dnfs: owned.filter((r) => r.dnf).length,
           avgFinish,
         };
       })
@@ -225,15 +240,13 @@ export class SupabaseRacesRepo implements RacesRepository {
         const owned = results.filter(
           (r) => r.carId === car.id && completed.has(r.raceId)
         );
-        const finishes = owned.filter((r) => !r.dnf);
         return {
           carId: car.id,
           carName: car.name,
           colorHex: car.colorHex,
           races: owned.length,
-          wins: finishes.filter((r) => r.position === 1).length,
-          podiums: finishes.filter((r) => r.position <= 3).length,
-          dnfs: owned.filter((r) => r.dnf).length,
+          wins: owned.filter((r) => r.position === 1).length,
+          podiums: owned.filter((r) => r.position <= 3).length,
         };
       })
       .sort((a, b) => b.wins - a.wins || b.races - a.races);
@@ -298,22 +311,18 @@ export class SupabaseRacesRepo implements RacesRepository {
         bestFinish: null,
       };
       current.races += 1;
-      if (!row.dnf && row.position === 1) current.wins += 1;
-      if (!row.dnf && row.position <= 3) current.podiums += 1;
-      if (!row.dnf) {
-        current.bestFinish =
-          current.bestFinish === null
-            ? row.position
-            : Math.min(current.bestFinish, row.position);
-      }
+      if (row.position === 1) current.wins += 1;
+      if (row.position <= 3) current.podiums += 1;
+      current.bestFinish =
+        current.bestFinish === null
+          ? row.position
+          : Math.min(current.bestFinish, row.position);
       byDriver.set(row.driverId, current);
     }
 
     return [...byDriver.values()]
       .map((row) => {
-        const finishes = history.filter(
-          (h) => h.driverId === row.driverId && !h.dnf
-        );
+        const finishes = history.filter((h) => h.driverId === row.driverId);
         return {
           ...row,
           avgFinish:
@@ -353,10 +362,8 @@ export class SupabaseRacesRepo implements RacesRepository {
           losses: 0,
           draws: 0,
         };
-        const myPos = me.dnf ? 999 : me.position;
-        const theirPos = other.dnf ? 999 : other.position;
-        if (myPos < theirPos) row.wins += 1;
-        else if (myPos > theirPos) row.losses += 1;
+        if (me.position < other.position) row.wins += 1;
+        else if (me.position > other.position) row.losses += 1;
         else row.draws += 1;
         h2h.set(other.driverId, row);
       }
@@ -370,9 +377,7 @@ export class SupabaseRacesRepo implements RacesRepository {
   async getDriverBestFinish(
     driverId: string
   ): Promise<{ position: number; racedAt?: string; trackName?: string } | null> {
-    const history = (await this.getDriverResultHistory(driverId)).filter(
-      (r) => !r.dnf
-    );
+    const history = await this.getDriverResultHistory(driverId);
     if (!history.length) return null;
     history.sort((a, b) => {
       if (a.position !== b.position) return a.position - b.position;
@@ -386,12 +391,8 @@ export class SupabaseRacesRepo implements RacesRepository {
     };
   }
 
-  pointsForPosition(
-    pointSystem: number[],
-    position: number,
-    dnf: boolean
-  ): number {
-    return calculatePointsForPosition(pointSystem, position, dnf);
+  pointsForPosition(pointSystem: number[], position: number): number {
+    return calculatePointsForPosition(pointSystem, position);
   }
 
   validateResults(
@@ -416,7 +417,6 @@ export class SupabaseRacesRepo implements RacesRepository {
       grid_position: result.gridPosition,
       position: result.position,
       points_awarded: result.pointsAwarded,
-      dnf: result.dnf,
       gap_turns: result.gapTurns ?? null,
       driver_of_the_day: result.driverOfTheDay ?? false,
       loadout: result.loadout ?? [],
@@ -513,7 +513,6 @@ export class SupabaseRacesRepo implements RacesRepository {
         gridPosition: result.gridPosition,
         position: result.position,
         pointsAwarded: result.pointsAwarded,
-        dnf: result.dnf,
       });
     }
     return history.sort((a, b) =>
@@ -546,16 +545,14 @@ export class SupabaseRacesRepo implements RacesRepository {
       };
       current.races += 1;
       current.points += row.pointsAwarded;
-      if (!row.dnf && row.position === 1) current.wins += 1;
-      if (!row.dnf && row.position <= 3) current.podiums += 1;
-      if (!row.dnf) {
-        current.finishSum += row.position;
-        current.finishCount += 1;
-        current.bestFinish =
-          current.bestFinish === null
-            ? row.position
-            : Math.min(current.bestFinish, row.position);
-      }
+      if (row.position === 1) current.wins += 1;
+      if (row.position <= 3) current.podiums += 1;
+      current.finishSum += row.position;
+      current.finishCount += 1;
+      current.bestFinish =
+        current.bestFinish === null
+          ? row.position
+          : Math.min(current.bestFinish, row.position);
       map.set(key.id, current);
     }
     return [...map.values()]

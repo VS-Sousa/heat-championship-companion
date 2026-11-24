@@ -6,8 +6,8 @@ export class PreviewDriversRepo implements DriversRepository {
   constructor(private readonly store: PreviewStore) {}
 
   async list(): Promise<Driver[]> {
-    return [...this.store.snapshot().drivers].sort(
-      (a, b) => a.number - b.number
+    return [...this.store.snapshot().drivers].sort((a, b) =>
+      a.name.localeCompare(b.name)
     );
   }
 
@@ -20,8 +20,6 @@ export class PreviewDriversRepo implements DriversRepository {
       id: newId(),
       name: input.name,
       nickname: input.nickname?.trim() || undefined,
-      abbreviation: input.abbreviation.toUpperCase(),
-      number: input.number,
       isLegend: input.isLegend,
       fixedCarId: input.fixedCarId,
       favoriteCarId: input.favoriteCarId,
@@ -42,14 +40,17 @@ export class PreviewDriversRepo implements DriversRepository {
         id,
         name: input.name,
         nickname: input.nickname?.trim() || undefined,
-        abbreviation: input.abbreviation.toUpperCase(),
-        number: input.number,
         isLegend: input.isLegend,
         fixedCarId: input.fixedCarId,
         favoriteCarId: input.favoriteCarId,
         userId: input.userId,
       };
       draft.drivers[idx] = updated;
+      if (updated.isLegend) {
+        draft.associationMembers = draft.associationMembers.filter(
+          (m) => m.driverId !== id
+        );
+      }
     });
     return updated!;
   }

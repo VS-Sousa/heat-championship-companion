@@ -15,6 +15,12 @@
     <div class="min-w-0">
       <p class="heat-subtitle">{{ 'cars.color' | t }}</p>
       <h1 class="heat-title break-words">{{ car()!.name }}</h1>
+      <div class="mt-1 flex flex-wrap items-center gap-2 text-sm">
+        <span class="font-mono uppercase text-heat-muted">{{ car()!.colorHex }}</span>
+        <button type="button" class="heat-btn-ghost text-xs" (click)="copyColor()">
+          {{ (copied() ? 'cars.copied' : 'cars.copyColor') | t }}
+        </button>
+      </div>
     </div>
   </div>
 
@@ -84,7 +90,7 @@
                   </a>
                 </td>
                 <td class="py-2">{{ row.trackName || '—' }}</td>
-                <td class="py-2 font-mono">{{ row.dnf ? 'DNF' : row.position }}</td>
+                <td class="py-2 font-mono">{{ row.position }}</td>
                 <td class="py-2 font-mono">{{ row.pointsAwarded }}</td>
               </tr>
             }

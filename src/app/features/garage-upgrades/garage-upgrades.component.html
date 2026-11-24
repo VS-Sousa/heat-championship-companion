@@ -26,11 +26,10 @@
           <div class="min-w-0">
             <p class="truncate font-display text-xl tracking-wider">{{ upgrade.name }}</p>
             <p class="text-xs uppercase tracking-[0.16em] text-heat-muted">
-              {{ 'garage.cat.' + upgrade.category | t }} ·
-              <span class="font-mono text-heat-yellow">{{ upgrade.heatCost }} Heat</span>
+              <span class="text-heat-yellow">{{ 'garage.set.' + upgrade.set | t }}</span>
             </p>
-            @if (upgrade.effect) {
-              <p class="mt-1 text-sm text-heat-muted">{{ upgrade.effect }}</p>
+            @if (upgrade.description) {
+              <p class="mt-1 text-sm text-heat-muted">{{ upgrade.description }}</p>
             }
           </div>
           @if (session.isHost()) {
@@ -80,35 +79,22 @@
           <label class="heat-label" for="guName">{{ 'garage.name' | t }}</label>
           <input id="guName" class="heat-input" name="name" [(ngModel)]="name" />
         </div>
-        <div class="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label class="heat-label" for="guCategory">{{ 'garage.category' | t }}</label>
-            <select id="guCategory" class="heat-input" name="category" [(ngModel)]="category">
-              @for (c of categories; track c) {
-                <option [value]="c">{{ 'garage.cat.' + c | t }}</option>
-              }
-            </select>
-          </div>
-          <div>
-            <label class="heat-label" for="guCost">{{ 'garage.heatCost' | t }}</label>
-            <input
-              id="guCost"
-              class="heat-input"
-              type="number"
-              min="0"
-              name="heatCost"
-              [(ngModel)]="heatCost"
-            />
-          </div>
+        <div>
+          <label class="heat-label" for="guSet">{{ 'garage.set' | t }}</label>
+          <select id="guSet" class="heat-input" name="set" [(ngModel)]="set">
+            @for (s of sets; track s) {
+              <option [value]="s">{{ 'garage.set.' + s | t }}</option>
+            }
+          </select>
         </div>
         <div>
-          <label class="heat-label" for="guEffect">{{ 'garage.effect' | t }}</label>
+          <label class="heat-label" for="guDescription">{{ 'garage.description' | t }}</label>
           <textarea
-            id="guEffect"
+            id="guDescription"
             class="heat-input"
             rows="3"
-            name="effect"
-            [(ngModel)]="effect"
+            name="description"
+            [(ngModel)]="description"
           ></textarea>
         </div>
         <div class="flex gap-2">

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Association, Driver } from '../../core/models/domain.models';
 import { AssociationsService } from '../../core/services/associations.service';
@@ -28,11 +28,12 @@ export class AssociationsComponent implements OnInit {
   readonly loading = signal(true);
   readonly formOpen = signal(false);
 
+  readonly humanDrivers = computed(() => this.drivers().filter((d) => !d.isLegend));
+
   readonly formatDriverName = formatDriverName;
 
   editingId: string | null = null;
   name = '';
-  abbreviation = '';
 
   async ngOnInit(): Promise<void> {
     await this.reload();
@@ -68,7 +69,6 @@ export class AssociationsComponent implements OnInit {
   resetForm(): void {
     this.editingId = null;
     this.name = '';
-    this.abbreviation = '';
     this.selectedMemberIds.set([]);
   }
 
@@ -80,7 +80,6 @@ export class AssociationsComponent implements OnInit {
   async startEdit(association: Association): Promise<void> {
     this.editingId = association.id;
     this.name = association.name;
-    this.abbreviation = association.abbreviation;
     try {
       this.selectedMemberIds.set(
         await this.associationsService.listMemberIds(association.id)
@@ -118,9 +117,8 @@ export class AssociationsComponent implements OnInit {
     try {
       const payload = {
         name: this.name.trim(),
-        abbreviation: this.abbreviation.trim().toUpperCase(),
       };
-      if (!payload.name || !payload.abbreviation) {
+      if (!payload.name) {
         throw new Error(this.i18n.t('associations.errorRequired'));
       }
       const saved = this.editingId

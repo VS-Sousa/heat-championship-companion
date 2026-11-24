@@ -1,6 +1,8 @@
 import {
   Championship,
+  ChampionshipEntry,
   ChampionshipProgression,
+  ConstructorStandingRow,
   CreateChampionshipRequest,
   GlobalChampionRow,
   PlannedRoundInput,
@@ -14,10 +16,18 @@ import {
 import { formatDriverName } from '../../../utils/driver-display';
 import { CAR_COLORS } from '../../../utils/car-colors';
 import {
+  ChampionshipEntryInput,
   ChampionshipsRepository,
   ChampionshipUpdateInput,
   DataProvider,
 } from '../../data-provider';
+import {
+  applyResultToStanding,
+  emptyStandingAccum,
+  sortStandingRows,
+} from '../../shared/standings-sort';
+import { computeTitleContention } from '../../shared/title-fight';
+import { resolveDriverLabel } from './preview-driver-label';
 import { newId, PreviewStore } from './preview-store';
 
 export class PreviewChampionshipsRepo implements ChampionshipsRepository {
@@ -49,6 +59,17 @@ export class PreviewChampionshipsRepo implements ChampionshipsRepository {
     if (!input.calendar.length) {
       throw new Error('Add at least one planned round.');
     }
+    if (!input.scoringSystemId) {
+      throw new Error('Select a scoring system.');
+    }
+    const carIds = [...new Set(input.carIds)];
+    if (!carIds.length) {
+      throw new Error('Select at least one car for the championship.');
+    }
+    const knownCars = new Set(this.store.snapshot().cars.map((car) => car.id));
+    if (carIds.some((carId) => !knownCars.has(carId))) {
+      throw new Error('Car not found.');
+    }
 
     let seriesId = newId();
     let editionNumber = 1;
@@ -73,12 +94,12 @@ export class PreviewChampionshipsRepo implements ChampionshipsRepository {
       useEvents: input.useEvents,
       usePress: input.usePress,
       useSponsorship: input.useSponsorship,
-      associationId: input.associationId,
       scoringSystemId: input.scoringSystemId,
       isActive: true,
     };
     this.store.update((draft) => {
       draft.championships.push(championship);
+      draft.championshipCars[championship.id] = carIds;
       draft.races.push(
         ...this.calendarRaces(championship.id, input.calendar)
       );
@@ -106,7 +127,6 @@ export class PreviewChampionshipsRepo implements ChampionshipsRepository {
         useEvents: input.useEvents,
         usePress: input.usePress,
         useSponsorship: input.useSponsorship,
-        associationId: input.associationId,
         scoringSystemId: input.scoringSystemId,
         isActive: input.isActive,
       };
@@ -126,6 +146,10 @@ export class PreviewChampionshipsRepo implements ChampionshipsRepository {
         (result) => !raceIds.has(result.raceId)
       );
       draft.races = draft.races.filter((race) => race.championshipId !== id);
+      delete draft.championshipCars[id];
+      draft.championshipEntries = draft.championshipEntries.filter(
+        (entry) => entry.championshipId !== id
+      );
       draft.championships = draft.championships.filter(
         (championship) => championship.id !== id
       );
@@ -202,14 +226,92 @@ export class PreviewChampionshipsRepo implements ChampionshipsRepository {
     const championship = await this.getById(championshipId);
     if (!championship) return [];
     const races = await this.listRaces(championshipId);
-    const standings = await this.aggregateStandings(
-      races.filter((race) => race.status === 'completed').map((race) => race.id)
+    return this.aggregateStandings(
+      races.filter((race) => race.status === 'completed').map((race) => race.id),
+      championshipId
     );
-    return this.applyTitleFight(
-      standings,
-      championship.pointSystem,
-      races.filter((race) => race.status === 'planned').length
+  }
+
+  async getConstructorStandings(
+    championshipId: string
+  ): Promise<ConstructorStandingRow[]> {
+    const championship = await this.getById(championshipId);
+    if (!championship) return [];
+    const db = this.store.snapshot();
+    const completed = new Set(
+      (await this.listRaces(championshipId))
+        .filter((race) => race.status === 'completed')
+        .map((race) => race.id)
     );
+    const cars = await this.provider.cars.list();
+    const byCar = new Map<string, ConstructorStandingRow>();
+    const rowFor = (carId: string): ConstructorStandingRow | null => {
+      const existing = byCar.get(carId);
+      if (existing) return existing;
+      const car = cars.find((item) => item.id === carId);
+      if (!car) return null;
+      const row: ConstructorStandingRow = {
+        carId,
+        carName: car.name,
+        colorHex: car.colorHex,
+        points: 0,
+        wins: 0,
+        podiums: 0,
+        races: 0,
+      };
+      byCar.set(carId, row);
+      return row;
+    };
+    for (const carId of db.championshipCars[championshipId] ?? []) rowFor(carId);
+    for (const result of db.results) {
+      if (!completed.has(result.raceId)) continue;
+      const row = rowFor(result.carId);
+      if (!row) continue;
+      row.points += result.pointsAwarded;
+      row.races += 1;
+      if (result.position === 1) row.wins += 1;
+      if (result.position <= 3) row.podiums += 1;
+    }
+    return [...byCar.values()].sort(
+      (a, b) =>
+        b.points - a.points ||
+        b.wins - a.wins ||
+        b.podiums - a.podiums ||
+        a.carName.localeCompare(b.carName)
+    );
+  }
+
+  async computeTitleFight(championshipId: string): Promise<StandingRow[]> {
+    const championship = await this.getById(championshipId);
+    if (!championship) return [];
+    const races = await this.listRaces(championshipId);
+    const standings = await this.getStandings(championshipId);
+    const entries = await this.listEntries(championshipId);
+    const drivers = await this.provider.drivers.list();
+
+    // Entered drivers with no results yet still compete for the title.
+    const field = [...standings];
+    for (const entry of entries) {
+      if (field.some((row) => row.driverId === entry.driverId)) continue;
+      const driver = drivers.find((item) => item.id === entry.driverId);
+      if (!driver) continue;
+      field.push({
+        ...emptyStandingAccum({
+          driverId: driver.id,
+          driverName: driver.name,
+          nickname: driver.nickname,
+          abbreviation: entry.abbreviation,
+          number: entry.number,
+        }),
+      });
+    }
+    return computeTitleContention({
+      standings: sortStandingRows(field),
+      remainingPlanned: races.filter((race) => race.status === 'planned')
+        .length,
+      gridSize: Math.max(entries.length, field.length),
+      pointSystem: championship.pointSystem,
+    });
   }
 
   async getProgression(
@@ -227,6 +329,7 @@ export class PreviewChampionshipsRepo implements ChampionshipsRepository {
       this.provider.drivers.list(),
       this.provider.cars.list(),
     ]);
+    const entries = this.store.snapshot().championshipEntries;
     const totals = new Map<
       string,
       {
@@ -240,29 +343,25 @@ export class PreviewChampionshipsRepo implements ChampionshipsRepository {
     const carUsage = new Map<string, Map<string, number>>();
     const pointsAfter = new Map<string, number[]>();
     const finishesAfter = new Map<string, Array<number | null>>();
-    const dnfsAfter = new Map<string, boolean[]>();
 
     for (let roundIndex = 0; roundIndex < completed.length; roundIndex++) {
       const results = resultsByRace.get(completed[roundIndex].id) ?? [];
-      const roundFinishes = new Map<
-        string,
-        { position: number; dnf: boolean }
-      >();
+      const roundFinishes = new Map<string, { position: number }>();
       for (const result of results) {
         const driver = drivers.find((item) => item.id === result.driverId);
         if (!driver) continue;
+        const label = resolveDriverLabel(driver, entries, championshipId);
         const current = totals.get(result.driverId) ?? {
           points: 0,
           name: driver.name,
           nickname: driver.nickname,
-          abbreviation: driver.abbreviation,
-          number: driver.number,
+          abbreviation: label.abbreviation,
+          number: label.number,
         };
         current.points += result.pointsAwarded;
         totals.set(result.driverId, current);
         roundFinishes.set(result.driverId, {
           position: result.position,
-          dnf: result.dnf,
         });
         const usage = carUsage.get(result.driverId) ?? new Map<string, number>();
         usage.set(result.carId, (usage.get(result.carId) ?? 0) + 1);
@@ -270,25 +369,20 @@ export class PreviewChampionshipsRepo implements ChampionshipsRepository {
         if (!pointsAfter.has(result.driverId)) {
           pointsAfter.set(result.driverId, Array(roundIndex).fill(0));
           finishesAfter.set(result.driverId, Array(roundIndex).fill(null));
-          dnfsAfter.set(result.driverId, Array(roundIndex).fill(false));
         }
       }
       for (const [driverId, total] of totals) {
         const points = pointsAfter.get(driverId) ?? Array(roundIndex).fill(0);
         const finishes =
           finishesAfter.get(driverId) ?? Array(roundIndex).fill(null);
-        const dnfs = dnfsAfter.get(driverId) ?? Array(roundIndex).fill(false);
         while (points.length < roundIndex)
           points.push(points[points.length - 1] ?? 0);
         while (finishes.length < roundIndex) finishes.push(null);
-        while (dnfs.length < roundIndex) dnfs.push(false);
         const finish = roundFinishes.get(driverId);
         points.push(total.points);
         finishes.push(finish?.position ?? null);
-        dnfs.push(finish?.dnf ?? false);
         pointsAfter.set(driverId, points);
         finishesAfter.set(driverId, finishes);
-        dnfsAfter.set(driverId, dnfs);
       }
     }
 
@@ -310,10 +404,6 @@ export class PreviewChampionshipsRepo implements ChampionshipsRepository {
         ),
         finishPositionByRound: this.padNullableSeries(
           finishesAfter.get(driverId) ?? [],
-          completed.length
-        ),
-        dnfByRound: this.padBooleanSeries(
-          dnfsAfter.get(driverId) ?? [],
           completed.length
         ),
       })
@@ -438,8 +528,7 @@ export class PreviewChampionshipsRepo implements ChampionshipsRepository {
           driverId: driver.id,
           driverName: formatDriverName(driver),
           nickname: driver.nickname,
-          abbreviation: driver.abbreviation,
-          number: driver.number,
+          ...resolveDriverLabel(driver, this.store.snapshot().championshipEntries),
           isLegend: driver.isLegend,
           titles: stats.titles,
           lastTitleSeason: stats.lastSeason,
@@ -507,23 +596,188 @@ export class PreviewChampionshipsRepo implements ChampionshipsRepository {
     return wins.sort((a, b) => b.editionNumber - a.editionNumber);
   }
 
-  applyTitleFight(
-    standings: StandingRow[],
-    pointSystem: number[],
-    remainingPlanned: number
-  ): StandingRow[] {
-    if (!standings.length) return standings;
-    const maximum = Math.max(...pointSystem, 0);
-    const leaderPoints = standings[0].points;
-    return standings.map((standing) => ({
-      ...standing,
-      inTitleFight:
-        remainingPlanned === 0
-          ? standing.points === leaderPoints
-          : standing.points + remainingPlanned * maximum >= leaderPoints,
-    }));
+  async getPreviousSeriesChampionDriverId(
+    seriesId: string,
+    beforeEditionNumber: number
+  ): Promise<string | null> {
+    const previous = (await this.listBySeries(seriesId)).find(
+      (edition) => edition.editionNumber < beforeEditionNumber
+    );
+    if (!previous || (previous.isActive && !previous.finishedAt)) return null;
+    return (await this.getStandings(previous.id))[0]?.driverId ?? null;
   }
 
+  async listCars(championshipId: string): Promise<string[]> {
+    return [...(this.store.snapshot().championshipCars[championshipId] ?? [])];
+  }
+
+  async listEntries(championshipId: string): Promise<ChampionshipEntry[]> {
+    return this.store
+      .snapshot()
+      .championshipEntries.filter((entry) => entry.championshipId === championshipId)
+      .map((entry) => ({
+        ...entry,
+        garageUpgradeIds: [...(entry.garageUpgradeIds ?? [])],
+      }))
+      .sort((a, b) => a.number - b.number);
+  }
+
+  async upsertEntry(
+    championshipId: string,
+    input: ChampionshipEntryInput
+  ): Promise<ChampionshipEntry> {
+    const championship = await this.requireOpenChampionship(championshipId);
+    const db = this.store.snapshot();
+    const driver = db.drivers.find((item) => item.id === input.driverId);
+    if (!driver) throw new Error('Driver not found.');
+
+    const allowedCars = db.championshipCars[championshipId] ?? [];
+    if (!allowedCars.includes(input.carId)) {
+      throw new Error('Car is not part of this championship.');
+    }
+
+    const number = Number(input.number);
+    if (!Number.isInteger(number) || number < 1) {
+      throw new Error('Car number must be a positive whole number.');
+    }
+    const abbreviation = (input.abbreviation ?? '').trim().toUpperCase();
+    if (!abbreviation) throw new Error('Abbreviation is required.');
+
+    const others = db.championshipEntries.filter(
+      (entry) =>
+        entry.championshipId === championshipId &&
+        entry.driverId !== input.driverId
+    );
+    if (others.some((entry) => entry.carId === input.carId)) {
+      throw new Error('Car is already assigned to another driver.');
+    }
+    if (others.some((entry) => entry.number === number)) {
+      throw new Error('Number is already taken in this championship.');
+    }
+    if (others.some((entry) => entry.abbreviation.toUpperCase() === abbreviation)) {
+      throw new Error('Abbreviation is already taken in this championship.');
+    }
+    if (number === 1 && !driver.isLegend) {
+      const previousChampion = await this.getPreviousSeriesChampionDriverId(
+        championship.seriesId,
+        championship.editionNumber
+      );
+      if (previousChampion !== driver.id) {
+        throw new Error(
+          'Number 1 is reserved for legends or the previous series champion.'
+        );
+      }
+    }
+
+    const existing = db.championshipEntries.find(
+      (entry) =>
+        entry.championshipId === championshipId &&
+        entry.driverId === input.driverId
+    );
+    const garageUpgradeIds =
+      input.garageUpgradeIds !== undefined
+        ? this.validateUpgrades(championship, driver.isLegend, input.garageUpgradeIds)
+        : this.validateUpgrades(
+            championship,
+            driver.isLegend,
+            existing?.garageUpgradeIds ?? [],
+            true
+          );
+
+    const entry: ChampionshipEntry = {
+      id: existing?.id ?? newId(),
+      championshipId,
+      driverId: input.driverId,
+      carId: input.carId,
+      number,
+      abbreviation,
+      garageUpgradeIds,
+    };
+    this.store.update((draft) => {
+      const index = draft.championshipEntries.findIndex(
+        (item) => item.id === entry.id
+      );
+      if (index >= 0) draft.championshipEntries[index] = entry;
+      else draft.championshipEntries.push(entry);
+    });
+    return { ...entry, garageUpgradeIds: [...garageUpgradeIds] };
+  }
+
+  async removeEntry(championshipId: string, entryId: string): Promise<void> {
+    await this.requireOpenChampionship(championshipId);
+    const exists = this.store
+      .snapshot()
+      .championshipEntries.some(
+        (entry) => entry.id === entryId && entry.championshipId === championshipId
+      );
+    if (!exists) throw new Error('Entry not found.');
+    this.store.update((draft) => {
+      draft.championshipEntries = draft.championshipEntries.filter(
+        (entry) => entry.id !== entryId
+      );
+    });
+  }
+
+  async setEntryUpgrades(
+    championshipId: string,
+    entryId: string,
+    garageUpgradeIds: string[]
+  ): Promise<ChampionshipEntry> {
+    const championship = await this.requireOpenChampionship(championshipId);
+    const db = this.store.snapshot();
+    const existing = db.championshipEntries.find(
+      (entry) => entry.id === entryId && entry.championshipId === championshipId
+    );
+    if (!existing) throw new Error('Entry not found.');
+    const driver = db.drivers.find((item) => item.id === existing.driverId);
+    if (!driver) throw new Error('Driver not found.');
+    const ids = this.validateUpgrades(championship, driver.isLegend, garageUpgradeIds);
+    const updated: ChampionshipEntry = { ...existing, garageUpgradeIds: ids };
+    this.store.update((draft) => {
+      const index = draft.championshipEntries.findIndex(
+        (entry) => entry.id === entryId
+      );
+      draft.championshipEntries[index] = updated;
+    });
+    return { ...updated, garageUpgradeIds: [...ids] };
+  }
+
+  private async requireOpenChampionship(id: string): Promise<Championship> {
+    const championship = await this.getById(id);
+    if (!championship) throw new Error('Championship not found.');
+    if (!championship.isActive || championship.finishedAt) {
+      throw new Error('Championship is finalized.');
+    }
+    return championship;
+  }
+
+  /**
+   * Upgrades are only for human drivers in garage-enabled championships.
+   * When `lenient` (re-saving existing data), invalid combinations are cleared
+   * instead of rejected.
+   */
+  private validateUpgrades(
+    championship: Championship,
+    isLegend: boolean,
+    ids: string[],
+    lenient = false
+  ): string[] {
+    const unique = [...new Set(ids)];
+    if (!unique.length) return [];
+    if (isLegend || !championship.useGarage) {
+      if (lenient) return [];
+      throw new Error(
+        'Garage upgrades are only available to human drivers in garage championships.'
+      );
+    }
+    const known = new Set(
+      this.store.snapshot().garageUpgrades.map((upgrade) => upgrade.id)
+    );
+    if (unique.some((id) => !known.has(id))) {
+      throw new Error('Garage upgrade not found.');
+    }
+    return unique;
+  }
   private calendarRaces(
     championshipId: string,
     rounds: PlannedRoundInput[]
@@ -540,40 +794,39 @@ export class PreviewChampionshipsRepo implements ChampionshipsRepository {
     }));
   }
 
-  private async aggregateStandings(raceIds: string[]): Promise<StandingRow[]> {
+  private async aggregateStandings(
+    raceIds: string[],
+    championshipId?: string
+  ): Promise<StandingRow[]> {
     if (!raceIds.length) return [];
     const raceIdSet = new Set(raceIds);
+    const db = this.store.snapshot();
+    const roundByRace = new Map(
+      db.races.map((race) => [race.id, race.roundNumber])
+    );
     const drivers = await this.provider.drivers.list();
     const byDriver = new Map<string, StandingRow>();
-    for (const result of this.store.snapshot().results) {
+    for (const result of db.results) {
       if (!raceIdSet.has(result.raceId)) continue;
       const driver = drivers.find((item) => item.id === result.driverId);
       if (!driver) continue;
-      const current = byDriver.get(driver.id) ?? {
-        driverId: driver.id,
-        driverName: driver.name,
-        nickname: driver.nickname,
-        abbreviation: driver.abbreviation,
-        number: driver.number,
-        points: 0,
-        wins: 0,
-        podiums: 0,
-        races: 0,
-      };
-      current.points += result.pointsAwarded;
-      current.races += 1;
-      if (!result.dnf && result.position === 1) current.wins += 1;
-      if (!result.dnf && result.position <= 3) current.podiums += 1;
+      const current =
+        byDriver.get(driver.id) ??
+        emptyStandingAccum({
+          driverId: driver.id,
+          driverName: driver.name,
+          nickname: driver.nickname,
+          ...resolveDriverLabel(driver, db.championshipEntries, championshipId),
+        });
+      applyResultToStanding(
+        current,
+        result,
+        championshipId ? roundByRace.get(result.raceId) : undefined
+      );
       byDriver.set(driver.id, current);
     }
-    return [...byDriver.values()].sort(
-      (a, b) =>
-        b.points - a.points ||
-        b.wins - a.wins ||
-        a.driverName.localeCompare(b.driverName)
-    );
+    return sortStandingRows([...byDriver.values()]);
   }
-
   private async bestCarForDriverInChampionship(
     championshipId: string,
     driverId: string
@@ -629,11 +882,5 @@ export class PreviewChampionshipsRepo implements ChampionshipsRepository {
     return values.length >= length
       ? values.slice(0, length)
       : [...values, ...Array(length - values.length).fill(null)];
-  }
-
-  private padBooleanSeries(values: boolean[], length: number): boolean[] {
-    return values.length >= length
-      ? values.slice(0, length)
-      : [...values, ...Array(length - values.length).fill(false)];
   }
 }

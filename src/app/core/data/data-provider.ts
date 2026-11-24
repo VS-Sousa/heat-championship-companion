@@ -6,9 +6,11 @@ import {
   Car,
   CarStatRow,
   Championship,
+  ChampionshipEntry,
   ChampionshipProgression,
   CompletePlannedRaceRequest,
   CompletePostRaceRequest,
+  ConstructorStandingRow,
   CreateChampionshipRequest,
   Driver,
   DriverStatRow,
@@ -30,6 +32,11 @@ import {
   TrackDriverHistoryRow,
 } from '../models/domain.models';
 import { StorageMode } from './storage-mode';
+
+export type ChampionshipEntryInput = Omit<
+  ChampionshipEntry,
+  'id' | 'championshipId' | 'garageUpgradeIds'
+> & { garageUpgradeIds?: string[] };
 
 export interface CarsRepository {
   list(): Promise<Car[]>;
@@ -120,6 +127,10 @@ export interface ChampionshipsRepository {
     rounds: PlannedRoundInput[]
   ): Promise<void>;
   getStandings(championshipId: string): Promise<StandingRow[]>;
+  getConstructorStandings(
+    championshipId: string
+  ): Promise<ConstructorStandingRow[]>;
+  computeTitleFight(championshipId: string): Promise<StandingRow[]>;
   getProgression(championshipId: string): Promise<ChampionshipProgression>;
   listResultsByRaceIds(raceIds: string[]): Promise<Map<string, RaceResult[]>>;
   getOverallStandings(): Promise<StandingRow[]>;
@@ -127,11 +138,22 @@ export interface ChampionshipsRepository {
   getGlobalChampionsHall(): Promise<GlobalChampionRow[]>;
   getDriverTitles(driverId: string): Promise<TitleWin[]>;
   getCarTitles(carId: string): Promise<TitleWin[]>;
-  applyTitleFight(
-    standings: StandingRow[],
-    pointSystem: number[],
-    remainingPlanned: number
-  ): StandingRow[];
+  listCars(championshipId: string): Promise<string[]>;
+  listEntries(championshipId: string): Promise<ChampionshipEntry[]>;
+  upsertEntry(
+    championshipId: string,
+    input: ChampionshipEntryInput
+  ): Promise<ChampionshipEntry>;
+  removeEntry(championshipId: string, entryId: string): Promise<void>;
+  setEntryUpgrades(
+    championshipId: string,
+    entryId: string,
+    garageUpgradeIds: string[]
+  ): Promise<ChampionshipEntry>;
+  getPreviousSeriesChampionDriverId(
+    seriesId: string,
+    beforeEditionNumber: number
+  ): Promise<string | null>;
 }
 
 export interface RacesRepository {
@@ -164,11 +186,7 @@ export interface RacesRepository {
   getDriverBestFinish(
     driverId: string
   ): Promise<{ position: number; racedAt?: string; trackName?: string } | null>;
-  pointsForPosition(
-    pointSystem: number[],
-    position: number,
-    dnf: boolean
-  ): number;
+  pointsForPosition(pointSystem: number[], position: number): number;
   validateResults(
     results: {
       driverId: string;

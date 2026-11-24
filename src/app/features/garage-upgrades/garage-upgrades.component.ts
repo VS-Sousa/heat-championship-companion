@@ -2,20 +2,19 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   GarageUpgrade,
-  GarageUpgradeCategory,
+  GarageUpgradeSet,
 } from '../../core/models/domain.models';
 import { GarageUpgradesService } from '../../core/services/garage-upgrades.service';
 import { SessionService } from '../../core/services/session.service';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { I18nService } from '../../core/i18n/i18n.service';
 
-export const GARAGE_CATEGORIES: GarageUpgradeCategory[] = [
-  'engine',
-  'suspension',
-  'brakes',
-  'tires',
-  'cooling',
-  'other',
+export const GARAGE_SETS: GarageUpgradeSet[] = [
+  'basegame',
+  'heavy_rain',
+  'tunnel_vision',
+  'rocky_roads',
+  'homebrew',
 ];
 
 @Component({
@@ -29,7 +28,7 @@ export class GarageUpgradesComponent implements OnInit {
   private readonly i18n = inject(I18nService);
   readonly session = inject(SessionService);
 
-  readonly categories = GARAGE_CATEGORIES;
+  readonly sets = GARAGE_SETS;
   readonly upgrades = signal<GarageUpgrade[]>([]);
   readonly error = signal<string | null>(null);
   readonly loading = signal(true);
@@ -37,9 +36,8 @@ export class GarageUpgradesComponent implements OnInit {
 
   editingId: string | null = null;
   name = '';
-  category: GarageUpgradeCategory = 'engine';
-  heatCost = 0;
-  effect = '';
+  description = '';
+  set: GarageUpgradeSet = 'basegame';
 
   async ngOnInit(): Promise<void> {
     await this.reload();
@@ -62,9 +60,8 @@ export class GarageUpgradesComponent implements OnInit {
   resetForm(): void {
     this.editingId = null;
     this.name = '';
-    this.category = 'engine';
-    this.heatCost = 0;
-    this.effect = '';
+    this.description = '';
+    this.set = 'basegame';
   }
 
   startCreate(): void {
@@ -75,9 +72,8 @@ export class GarageUpgradesComponent implements OnInit {
   startEdit(upgrade: GarageUpgrade): void {
     this.editingId = upgrade.id;
     this.name = upgrade.name;
-    this.category = upgrade.category;
-    this.heatCost = upgrade.heatCost;
-    this.effect = upgrade.effect;
+    this.description = upgrade.description;
+    this.set = upgrade.set;
     this.formOpen.set(true);
   }
 
@@ -91,9 +87,8 @@ export class GarageUpgradesComponent implements OnInit {
     try {
       const payload = {
         name: this.name.trim(),
-        category: this.category,
-        heatCost: Number(this.heatCost) || 0,
-        effect: this.effect.trim(),
+        description: this.description.trim(),
+        set: this.set,
       };
       if (!payload.name) {
         throw new Error(this.i18n.t('garage.errorRequired'));

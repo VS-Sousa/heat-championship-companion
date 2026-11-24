@@ -1,6 +1,8 @@
 import {
   Championship,
+  ChampionshipEntry,
   ChampionshipProgression,
+  ConstructorStandingRow,
   CreateChampionshipRequest,
   GlobalChampionRow,
   PlannedRoundInput,
@@ -11,11 +13,41 @@ import {
   StandingRow,
   TitleWin,
 } from '../../../models/domain.models';
-import { mapChampionship, mapRace, mapRaceResult } from '../../../services/mappers';
+import {
+  mapChampionship,
+  mapChampionshipEntry,
+  mapRace,
+  mapRaceResult,
+} from '../../../services/mappers';
 import { SupabaseService } from '../../../services/supabase.service';
 import { formatDriverName } from '../../../utils/driver-display';
 import { CAR_COLORS } from '../../../utils/car-colors';
-import { ChampionshipsRepository, DataProvider } from '../../data-provider';
+import {
+  ChampionshipEntryInput,
+  ChampionshipsRepository,
+  ChampionshipUpdateInput,
+  DataProvider,
+} from '../../data-provider';
+import {
+  applyResultToStanding,
+  emptyStandingAccum,
+  sortStandingRows,
+  StandingAccum,
+} from '../../shared/standings-sort';
+import { computeTitleContention } from '../../shared/title-fight';
+import {
+  DriverIdentity,
+  fallbackDriverIdentity,
+  loadLatestDriverIdentities,
+} from './supabase-driver-identity';
+
+/** Races that still count towards the remaining calendar (not finished, not cancelled). */
+const OPEN_RACE_STATUSES = new Set([
+  'planned',
+  'pre_race',
+  'in_race',
+  'post_race',
+]);
 
 export class SupabaseChampionshipsRepo implements ChampionshipsRepository {
   constructor(
@@ -57,6 +89,22 @@ export class SupabaseChampionshipsRepo implements ChampionshipsRepository {
     if (!input.calendar.length) {
       throw new Error('Add at least one planned round.');
     }
+    if (!input.scoringSystemId) {
+      throw new Error('Select a scoring system.');
+    }
+    const carIds = [...new Set(input.carIds ?? [])];
+    if (!carIds.length) {
+      throw new Error('Select at least one car for the championship.');
+    }
+
+    let pointSystem = input.pointSystem;
+    if (!pointSystem?.length) {
+      const scoring = await this.provider.scoringSystems.getById(
+        input.scoringSystemId
+      );
+      if (!scoring) throw new Error('Scoring system not found.');
+      pointSystem = scoring.points;
+    }
 
     let seriesId: string = crypto.randomUUID();
     let editionNumber = 1;
@@ -81,13 +129,12 @@ export class SupabaseChampionshipsRepo implements ChampionshipsRepository {
         season: input.season,
         series_id: seriesId,
         edition_number: editionNumber,
-        point_system: input.pointSystem,
+        point_system: pointSystem,
         use_garage: input.useGarage,
         use_events: input.useEvents,
         use_press: input.usePress,
         use_sponsorship: input.useSponsorship,
-        association_id: input.associationId ?? null,
-        scoring_system_id: input.scoringSystemId ?? null,
+        scoring_system_id: input.scoringSystemId,
         is_active: true,
       })
       .select('*')
@@ -95,16 +142,28 @@ export class SupabaseChampionshipsRepo implements ChampionshipsRepository {
     if (error) throw new Error(error.message);
 
     const championship = mapChampionship(data as Record<string, unknown>);
-    await this.insertCalendar(championship.id, input.calendar);
+    try {
+      const { error: carsError } = await client
+        .from('championship_cars')
+        .insert(
+          carIds.map((carId) => ({
+            championship_id: championship.id,
+            car_id: carId,
+          }))
+        );
+      if (carsError) throw new Error(carsError.message);
+      await this.insertCalendar(championship.id, input.calendar);
+    } catch (err) {
+      // Cascades remove championship_cars / races.
+      await client.from('championships').delete().eq('id', championship.id);
+      throw err;
+    }
     return championship;
   }
 
   async update(
     id: string,
-    input: Omit<
-      Championship,
-      'id' | 'seriesId' | 'editionNumber' | 'finishedAt'
-    > & { seriesId?: string; editionNumber?: number }
+    input: ChampionshipUpdateInput
   ): Promise<Championship> {
     const existing = await this.getById(id);
     if (!existing) throw new Error('Championship not found.');
@@ -120,8 +179,7 @@ export class SupabaseChampionshipsRepo implements ChampionshipsRepository {
         use_events: input.useEvents,
         use_press: input.usePress,
         use_sponsorship: input.useSponsorship,
-        association_id: input.associationId ?? null,
-        scoring_system_id: input.scoringSystemId ?? null,
+        scoring_system_id: input.scoringSystemId,
         is_active: input.isActive,
       })
       .eq('id', id)
@@ -211,14 +269,261 @@ export class SupabaseChampionshipsRepo implements ChampionshipsRepository {
     const championship = await this.getById(championshipId);
     if (!championship) return [];
 
-    const races = (await this.listRaces(championshipId)).filter(
-      (r) => r.status === 'completed'
+    const [races, entries] = await Promise.all([
+      this.listRaces(championshipId),
+      this.listEntryRows(championshipId),
+    ]);
+    return this.buildStandings(
+      races.filter((r) => r.status === 'completed'),
+      this.identitiesFromEntries(entries),
+      entries.map((e) => e.driverId)
     );
-    const standings = await this.aggregateStandings(races.map((r) => r.id));
-    const remaining = (await this.listRaces(championshipId)).filter(
-      (r) => r.status === 'planned'
-    ).length;
-    return this.applyTitleFight(standings, championship.pointSystem, remaining);
+  }
+
+  async getConstructorStandings(
+    championshipId: string
+  ): Promise<ConstructorStandingRow[]> {
+    const [races, carIds, cars] = await Promise.all([
+      this.listRaces(championshipId),
+      this.listCars(championshipId),
+      this.provider.cars.list(),
+    ]);
+    const completed = races.filter((r) => r.status === 'completed');
+    const resultsByRace = await this.listResultsByRaceIds(
+      completed.map((r) => r.id)
+    );
+    const carMap = new Map(cars.map((c) => [c.id, c]));
+    const byCar = new Map<string, ConstructorStandingRow>();
+    const rowFor = (carId: string): ConstructorStandingRow | null => {
+      const existing = byCar.get(carId);
+      if (existing) return existing;
+      const car = carMap.get(carId);
+      if (!car) return null;
+      const row: ConstructorStandingRow = {
+        carId,
+        carName: car.name,
+        colorHex: car.colorHex,
+        points: 0,
+        wins: 0,
+        podiums: 0,
+        races: 0,
+      };
+      byCar.set(carId, row);
+      return row;
+    };
+
+    for (const carId of carIds) rowFor(carId);
+    for (const results of resultsByRace.values()) {
+      for (const result of results) {
+        const row = rowFor(result.carId);
+        if (!row) continue;
+        row.points += result.pointsAwarded;
+        row.races += 1;
+        if (result.position === 1) row.wins += 1;
+        if (result.position <= 3) row.podiums += 1;
+      }
+    }
+
+    return [...byCar.values()].sort(
+      (a, b) =>
+        b.points - a.points ||
+        b.wins - a.wins ||
+        b.podiums - a.podiums ||
+        a.carName.localeCompare(b.carName)
+    );
+  }
+
+  async computeTitleFight(championshipId: string): Promise<StandingRow[]> {
+    const championship = await this.getById(championshipId);
+    if (!championship) return [];
+
+    const [races, entries] = await Promise.all([
+      this.listRaces(championshipId),
+      this.listEntryRows(championshipId),
+    ]);
+    const standings = await this.buildStandings(
+      races.filter((r) => r.status === 'completed'),
+      this.identitiesFromEntries(entries),
+      entries.map((e) => e.driverId)
+    );
+    return computeTitleContention({
+      standings,
+      remainingPlanned: races.filter((r) => OPEN_RACE_STATUSES.has(r.status))
+        .length,
+      gridSize: Math.max(entries.length, standings.length),
+      pointSystem: championship.pointSystem,
+    });
+  }
+
+  async getPreviousSeriesChampionDriverId(
+    seriesId: string,
+    beforeEditionNumber: number
+  ): Promise<string | null> {
+    const editions = (await this.listBySeries(seriesId))
+      .filter(
+        (c) =>
+          c.editionNumber < beforeEditionNumber &&
+          (!c.isActive || !!c.finishedAt)
+      )
+      .sort((a, b) => b.editionNumber - a.editionNumber);
+    for (const edition of editions) {
+      const champion = this.championOf(await this.getStandings(edition.id));
+      if (champion) return champion.driverId;
+    }
+    return null;
+  }
+
+  async listCars(championshipId: string): Promise<string[]> {
+    const { data, error } = await this.supabase
+      .getClient()
+      .from('championship_cars')
+      .select('car_id')
+      .eq('championship_id', championshipId);
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((row) =>
+      String((row as { car_id: string }).car_id)
+    );
+  }
+
+  async listEntries(championshipId: string): Promise<ChampionshipEntry[]> {
+    const entries = await this.listEntryRows(championshipId);
+    if (!entries.length) return [];
+
+    const { data, error } = await this.supabase
+      .getClient()
+      .from('championship_entry_upgrades')
+      .select('entry_id, garage_upgrade_id')
+      .in(
+        'entry_id',
+        entries.map((e) => e.id)
+      );
+    if (error) throw new Error(error.message);
+
+    const byEntry = new Map<string, string[]>();
+    for (const row of data ?? []) {
+      const record = row as Record<string, unknown>;
+      const entryId = String(record['entry_id']);
+      const list = byEntry.get(entryId) ?? [];
+      list.push(String(record['garage_upgrade_id']));
+      byEntry.set(entryId, list);
+    }
+    return entries.map((entry) => ({
+      ...entry,
+      garageUpgradeIds: byEntry.get(entry.id) ?? [],
+    }));
+  }
+
+  async upsertEntry(
+    championshipId: string,
+    input: ChampionshipEntryInput
+  ): Promise<ChampionshipEntry> {
+    const championship = await this.getById(championshipId);
+    if (!championship) throw new Error('Championship not found.');
+
+    const abbreviation = input.abbreviation.trim().toUpperCase();
+    if (abbreviation.length !== 3) {
+      throw new Error('Abbreviation must be exactly 3 characters.');
+    }
+    if (
+      !Number.isInteger(input.number) ||
+      input.number < 0 ||
+      input.number > 99
+    ) {
+      throw new Error('Number must be an integer between 0 and 99.');
+    }
+
+    const carIds = await this.listCars(championshipId);
+    if (!carIds.includes(input.carId)) {
+      throw new Error('Car is not part of this championship.');
+    }
+
+    const client = this.supabase.getClient();
+    const row = {
+      championship_id: championshipId,
+      driver_id: input.driverId,
+      car_id: input.carId,
+      number: input.number,
+      abbreviation,
+    };
+    const { data: existing, error: lookupError } = await client
+      .from('championship_entries')
+      .select('id')
+      .eq('championship_id', championshipId)
+      .eq('driver_id', input.driverId)
+      .maybeSingle();
+    if (lookupError) throw new Error(lookupError.message);
+
+    const query = existing
+      ? client
+          .from('championship_entries')
+          .update(row)
+          .eq('id', String((existing as { id: string }).id))
+      : client.from('championship_entries').insert(row);
+    const { data, error } = await query.select('*').single();
+    if (error) throw new Error(error.message);
+
+    const saved = data as Record<string, unknown>;
+    if (input.garageUpgradeIds) {
+      return this.setEntryUpgrades(
+        championshipId,
+        String(saved['id']),
+        input.garageUpgradeIds
+      );
+    }
+    const entries = await this.listEntries(championshipId);
+    const found = entries.find((e) => e.id === String(saved['id']));
+    return found ?? mapChampionshipEntry(saved);
+  }
+
+  async removeEntry(championshipId: string, entryId: string): Promise<void> {
+    const { error } = await this.supabase
+      .getClient()
+      .from('championship_entries')
+      .delete()
+      .eq('id', entryId)
+      .eq('championship_id', championshipId);
+    if (error) throw new Error(error.message);
+  }
+
+  async setEntryUpgrades(
+    championshipId: string,
+    entryId: string,
+    garageUpgradeIds: string[]
+  ): Promise<ChampionshipEntry> {
+    const championship = await this.getById(championshipId);
+    if (!championship) throw new Error('Championship not found.');
+    if (!championship.isActive || championship.finishedAt) {
+      throw new Error('Garage upgrades are locked once a championship is finalized.');
+    }
+
+    const client = this.supabase.getClient();
+    const { data: entryRow, error: entryError } = await client
+      .from('championship_entries')
+      .select('*')
+      .eq('id', entryId)
+      .eq('championship_id', championshipId)
+      .maybeSingle();
+    if (entryError) throw new Error(entryError.message);
+    if (!entryRow) throw new Error('Championship entry not found.');
+
+    const uniqueIds = [...new Set(garageUpgradeIds)];
+    const removed = await client
+      .from('championship_entry_upgrades')
+      .delete()
+      .eq('entry_id', entryId);
+    if (removed.error) throw new Error(removed.error.message);
+    if (uniqueIds.length) {
+      const { error } = await client
+        .from('championship_entry_upgrades')
+        .insert(
+          uniqueIds.map((garageUpgradeId) => ({
+            entry_id: entryId,
+            garage_upgrade_id: garageUpgradeId,
+          }))
+        );
+      if (error) throw new Error(error.message);
+    }
+    return mapChampionshipEntry(entryRow as Record<string, unknown>, uniqueIds);
   }
 
   /**
@@ -240,15 +545,16 @@ export class SupabaseChampionshipsRepo implements ChampionshipsRepository {
     const resultsByRace = await this.listResultsByRaceIds(
       completed.map((r) => r.id)
     );
-    const [drivers, cars] = await Promise.all([
+    const [drivers, cars, entries] = await Promise.all([
       this.provider.drivers.list(),
       this.provider.cars.list(),
+      this.listEntryRows(championshipId),
     ]);
+    const identities = this.identitiesFromEntries(entries);
     const totals = new Map<
       string,
       {
         points: number;
-        wins: number;
         name: string;
         nickname?: string;
         abbreviation: string;
@@ -265,31 +571,27 @@ export class SupabaseChampionshipsRepo implements ChampionshipsRepository {
 
     const pointsAfter = new Map<string, number[]>();
     const finishByRound = new Map<string, Array<number | null>>();
-    const dnfByRound = new Map<string, boolean[]>();
 
     for (let i = 0; i < completed.length; i++) {
       const race = completed[i];
       const results = resultsByRace.get(race.id) ?? [];
-      const finishThisRound = new Map<string, { position: number; dnf: boolean }>();
+      const finishThisRound = new Map<string, number>();
 
       for (const result of results) {
         const driver = drivers.find((d) => d.id === result.driverId);
         if (!driver) continue;
+        const identity =
+          identities.get(driver.id) ?? fallbackDriverIdentity(driver.name);
         const current = totals.get(result.driverId) ?? {
           points: 0,
-          wins: 0,
           name: driver.name,
           nickname: driver.nickname,
-          abbreviation: driver.abbreviation,
-          number: driver.number,
+          abbreviation: identity.abbreviation,
+          number: identity.number,
         };
         current.points += result.pointsAwarded;
-        if (!result.dnf && result.position === 1) current.wins += 1;
         totals.set(result.driverId, current);
-        finishThisRound.set(result.driverId, {
-          position: result.position,
-          dnf: result.dnf,
-        });
+        finishThisRound.set(result.driverId, result.position);
 
         const usage = carUsage.get(result.driverId) ?? new Map<string, number>();
         usage.set(result.carId, (usage.get(result.carId) ?? 0) + 1);
@@ -298,24 +600,18 @@ export class SupabaseChampionshipsRepo implements ChampionshipsRepository {
         if (!pointsAfter.has(result.driverId)) {
           pointsAfter.set(result.driverId, Array(i).fill(0));
           finishByRound.set(result.driverId, Array(i).fill(null));
-          dnfByRound.set(result.driverId, Array(i).fill(false));
         }
       }
 
       for (const [driverId] of totals) {
         const pts = pointsAfter.get(driverId) ?? Array(i).fill(0);
         const finishes = finishByRound.get(driverId) ?? Array(i).fill(null);
-        const dnfs = dnfByRound.get(driverId) ?? Array(i).fill(false);
         while (pts.length < i) pts.push(pts[pts.length - 1] ?? 0);
         while (finishes.length < i) finishes.push(null);
-        while (dnfs.length < i) dnfs.push(false);
         pts.push(totals.get(driverId)!.points);
-        const finish = finishThisRound.get(driverId);
-        finishes.push(finish?.position ?? null);
-        dnfs.push(finish?.dnf ?? false);
+        finishes.push(finishThisRound.get(driverId) ?? null);
         pointsAfter.set(driverId, pts);
         finishByRound.set(driverId, finishes);
-        dnfByRound.set(driverId, dnfs);
       }
     }
 
@@ -339,10 +635,6 @@ export class SupabaseChampionshipsRepo implements ChampionshipsRepository {
           finishByRound.get(driverId) ?? [],
           completed.length,
           null
-        ),
-        dnfByRound: this.padBooleanSeries(
-          dnfByRound.get(driverId) ?? [],
-          completed.length
         ),
       })
     );
@@ -431,7 +723,7 @@ export class SupabaseChampionshipsRepo implements ChampionshipsRepository {
     const races = (data ?? []).map((row) =>
       mapRace(row as Record<string, unknown>)
     );
-    return this.aggregateStandings(races.map((r) => r.id));
+    return this.buildStandings(races);
   }
 
   async getSeriesChampions(seriesId: string): Promise<SeriesChampionRow[]> {
@@ -453,7 +745,7 @@ export class SupabaseChampionshipsRepo implements ChampionshipsRepository {
 
       if (!edition.isActive || edition.finishedAt) {
         const standings = await this.getStandings(edition.id);
-        const champ = standings[0];
+        const champ = this.championOf(standings);
         if (champ) {
           const car = await this.bestCarForDriverInChampionship(
             edition.id,
@@ -488,7 +780,10 @@ export class SupabaseChampionshipsRepo implements ChampionshipsRepository {
     const championships = (await this.list()).filter(
       (c) => !c.isActive || !!c.finishedAt
     );
-    const drivers = await this.provider.drivers.list();
+    const [drivers, identities] = await Promise.all([
+      this.provider.drivers.list(),
+      loadLatestDriverIdentities(this.supabase),
+    ]);
     const tally = new Map<
       string,
       { titles: number; lastSeason?: string; lastEdition: number; lastCar?: string }
@@ -496,7 +791,7 @@ export class SupabaseChampionshipsRepo implements ChampionshipsRepository {
 
     for (const championship of championships) {
       const standings = await this.getStandings(championship.id);
-      const champ = standings[0];
+      const champ = this.championOf(standings);
       if (!champ) continue;
       const car = await this.bestCarForDriverInChampionship(
         championship.id,
@@ -519,12 +814,14 @@ export class SupabaseChampionshipsRepo implements ChampionshipsRepository {
     for (const driver of drivers) {
       const stats = tally.get(driver.id);
       if (!stats) continue;
+      const identity =
+        identities.get(driver.id) ?? fallbackDriverIdentity(driver.name);
       rows.push({
         driverId: driver.id,
         driverName: formatDriverName(driver),
         nickname: driver.nickname,
-        abbreviation: driver.abbreviation,
-        number: driver.number,
+        abbreviation: identity.abbreviation,
+        number: identity.number,
         isLegend: driver.isLegend,
         titles: stats.titles,
         lastTitleSeason: stats.lastSeason,
@@ -544,7 +841,7 @@ export class SupabaseChampionshipsRepo implements ChampionshipsRepository {
     const wins: TitleWin[] = [];
     for (const championship of championships) {
       const standings = await this.getStandings(championship.id);
-      if (standings[0]?.driverId !== driverId) continue;
+      if (this.championOf(standings)?.driverId !== driverId) continue;
       const car = await this.bestCarForDriverInChampionship(
         championship.id,
         driverId
@@ -570,7 +867,7 @@ export class SupabaseChampionshipsRepo implements ChampionshipsRepository {
     const wins: TitleWin[] = [];
     for (const championship of championships) {
       const standings = await this.getStandings(championship.id);
-      const champ = standings[0];
+      const champ = this.championOf(standings);
       if (!champ) continue;
       const car = await this.bestCarForDriverInChampionship(
         championship.id,
@@ -592,21 +889,37 @@ export class SupabaseChampionshipsRepo implements ChampionshipsRepository {
     return wins.sort((a, b) => b.editionNumber - a.editionNumber);
   }
 
-  applyTitleFight(
-    standings: StandingRow[],
-    pointSystem: number[],
-    remainingPlanned: number
-  ): StandingRow[] {
-    if (!standings.length) return standings;
-    const maxPts = Math.max(...pointSystem, 0);
-    const leaderPoints = standings[0].points;
-    return standings.map((row) => ({
-      ...row,
-      inTitleFight:
-        remainingPlanned === 0
-          ? row.points === leaderPoints
-          : row.points + remainingPlanned * maxPts >= leaderPoints,
-    }));
+  /** Leader only counts as champion once they have actually raced. */
+  private championOf(standings: StandingRow[]): StandingRow | undefined {
+    const leader = standings[0];
+    return leader && leader.races > 0 ? leader : undefined;
+  }
+
+  /** Entry rows without garage upgrades (cheap; used for identity/car lookup). */
+  private async listEntryRows(
+    championshipId: string
+  ): Promise<ChampionshipEntry[]> {
+    const { data, error } = await this.supabase
+      .getClient()
+      .from('championship_entries')
+      .select('*')
+      .eq('championship_id', championshipId)
+      .order('number', { ascending: true });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((row) =>
+      mapChampionshipEntry(row as Record<string, unknown>)
+    );
+  }
+
+  private identitiesFromEntries(
+    entries: ChampionshipEntry[]
+  ): Map<string, DriverIdentity> {
+    return new Map(
+      entries.map((e) => [
+        e.driverId,
+        { abbreviation: e.abbreviation, number: e.number },
+      ])
+    );
   }
 
   private async insertCalendar(
@@ -624,56 +937,75 @@ export class SupabaseChampionshipsRepo implements ChampionshipsRepository {
     if (error) throw new Error(error.message);
   }
 
-  private async aggregateStandings(raceIds: string[]): Promise<StandingRow[]> {
-    if (!raceIds.length) return [];
+  /**
+   * Aggregates completed races into sorted standings (points → P1 → P2 → P3 → latest win).
+   * `identities` are championship-scoped number/abbreviation; when omitted the latest
+   * entry per driver is used (cross-championship views).
+   * `seedDriverIds` get a zero row even before they have raced.
+   */
+  private async buildStandings(
+    races: Race[],
+    identities?: Map<string, DriverIdentity>,
+    seedDriverIds: string[] = []
+  ): Promise<StandingRow[]> {
+    if (!races.length && !seedDriverIds.length) return [];
 
-    const { data: resultsRaw, error } = await this.supabase
-      .getClient()
-      .from('race_results')
-      .select('*')
-      .in('race_id', raceIds);
-    if (error) throw new Error(error.message);
+    const raceIds = races.map((r) => r.id);
+    const roundByRace = new Map(races.map((r) => [r.id, r.roundNumber]));
+    const resultsByRace = await this.listResultsByRaceIds(raceIds);
+    const [drivers, resolvedIdentities] = await Promise.all([
+      this.provider.drivers.list(),
+      identities ? Promise.resolve(identities) : loadLatestDriverIdentities(this.supabase),
+    ]);
+    const driverMap = new Map(drivers.map((d) => [d.id, d]));
+    const byDriver = new Map<string, StandingAccum>();
 
-    const results = (resultsRaw ?? []).map((row) =>
-      mapRaceResult(row as Record<string, unknown>)
-    );
-    const drivers = await this.provider.drivers.list();
-    const byDriver = new Map<string, StandingRow>();
-
-    for (const result of results) {
-      const driver = drivers.find((d) => d.id === result.driverId);
-      if (!driver) continue;
-
-      const current = byDriver.get(result.driverId) ?? {
+    const rowFor = (driverId: string): StandingAccum | null => {
+      const existing = byDriver.get(driverId);
+      if (existing) return existing;
+      const driver = driverMap.get(driverId);
+      if (!driver) return null;
+      const identity =
+        resolvedIdentities.get(driverId) ?? fallbackDriverIdentity(driver.name);
+      const row = emptyStandingAccum({
         driverId: driver.id,
         driverName: driver.name,
         nickname: driver.nickname,
-        abbreviation: driver.abbreviation,
-        number: driver.number,
-        points: 0,
-        wins: 0,
-        podiums: 0,
-        races: 0,
-      };
+        abbreviation: identity.abbreviation,
+        number: identity.number,
+      });
+      byDriver.set(driverId, row);
+      return row;
+    };
 
-      current.points += result.pointsAwarded;
-      current.races += 1;
-      if (!result.dnf && result.position === 1) current.wins += 1;
-      if (!result.dnf && result.position <= 3) current.podiums += 1;
-      byDriver.set(result.driverId, current);
+    for (const driverId of seedDriverIds) rowFor(driverId);
+    for (const [raceId, results] of resultsByRace) {
+      const roundNumber = roundByRace.get(raceId);
+      for (const result of results) {
+        const row = rowFor(result.driverId);
+        if (!row) continue;
+        applyResultToStanding(row, result, roundNumber);
+      }
     }
 
-    return [...byDriver.values()].sort((a, b) => {
-      if (b.points !== a.points) return b.points - a.points;
-      if (b.wins !== a.wins) return b.wins - a.wins;
-      return a.driverName.localeCompare(b.driverName);
-    });
+    return sortStandingRows([...byDriver.values()]);
   }
 
   private async bestCarForDriverInChampionship(
     championshipId: string,
     driverId: string
   ): Promise<{ carId: string; carName: string } | null> {
+    // Championship entries pin one car per driver.
+    const entry = (await this.listEntryRows(championshipId)).find(
+      (e) => e.driverId === driverId
+    );
+    if (entry) {
+      const car = (await this.provider.cars.list()).find(
+        (c) => c.id === entry.carId
+      );
+      if (car) return { carId: car.id, carName: car.name };
+    }
+
     const races = (await this.listRaces(championshipId)).filter(
       (r) => r.status === 'completed'
     );

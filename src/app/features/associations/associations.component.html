@@ -26,7 +26,6 @@
           <div class="min-w-0">
             <p class="truncate font-display text-xl tracking-wider">
               {{ association.name }}
-              <span class="ml-2 font-mono text-sm text-heat-yellow">{{ association.abbreviation }}</span>
             </p>
             <p class="text-xs uppercase tracking-[0.16em] text-heat-muted">
               {{ memberCounts()[association.id] }} {{ 'associations.membersCount' | t }}
@@ -80,24 +79,13 @@
           <input id="assocName" class="heat-input" name="name" [(ngModel)]="name" />
         </div>
         <div>
-          <label class="heat-label" for="assocAbbr">{{ 'associations.abbreviation' | t }}</label>
-          <input
-            id="assocAbbr"
-            class="heat-input font-mono uppercase"
-            name="abbreviation"
-            maxlength="6"
-            [(ngModel)]="abbreviation"
-          />
-        </div>
-
-        <div>
           <p class="heat-label">
             {{ 'associations.members' | t }} ({{ selectedMemberIds().length }})
           </p>
           <div
             class="max-h-60 space-y-1 overflow-y-auto rounded-sm border border-heat-border bg-heat-steel/40 p-2"
           >
-            @for (driver of drivers(); track driver.id) {
+            @for (driver of humanDrivers(); track driver.id) {
               <label class="flex cursor-pointer items-center gap-2 px-1 py-1 text-sm">
                 <input
                   type="checkbox"
@@ -105,7 +93,6 @@
                   [ngModel]="isMember(driver.id)"
                   (ngModelChange)="toggleMember(driver.id, $event)"
                 />
-                <span class="font-mono text-heat-yellow">#{{ driver.number }}</span>
                 {{ formatDriverName(driver) }}
               </label>
             } @empty {

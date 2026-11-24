@@ -11,7 +11,7 @@ export class SupabaseDriversRepo implements DriversRepository {
       .getClient()
       .from('drivers')
       .select('*')
-      .order('number');
+      .order('name');
     if (error) throw new Error(error.message);
     return (data ?? []).map((row) => mapDriver(row as Record<string, unknown>));
   }
@@ -31,16 +31,7 @@ export class SupabaseDriversRepo implements DriversRepository {
     const { data, error } = await this.supabase
       .getClient()
       .from('drivers')
-      .insert({
-        name: input.name,
-        nickname: input.nickname?.trim() || null,
-        abbreviation: input.abbreviation.toUpperCase(),
-        number: input.number,
-        is_legend: input.isLegend,
-        fixed_car_id: input.fixedCarId ?? null,
-        favorite_car_id: input.favoriteCarId ?? null,
-        user_id: input.userId ?? null,
-      })
+      .insert(this.toRow(input))
       .select('*')
       .single();
     if (error) throw new Error(error.message);
@@ -51,21 +42,23 @@ export class SupabaseDriversRepo implements DriversRepository {
     const { data, error } = await this.supabase
       .getClient()
       .from('drivers')
-      .update({
-        name: input.name,
-        nickname: input.nickname?.trim() || null,
-        abbreviation: input.abbreviation.toUpperCase(),
-        number: input.number,
-        is_legend: input.isLegend,
-        fixed_car_id: input.fixedCarId ?? null,
-        favorite_car_id: input.favoriteCarId ?? null,
-        user_id: input.userId ?? null,
-      })
+      .update(this.toRow(input))
       .eq('id', id)
       .select('*')
       .single();
     if (error) throw new Error(error.message);
     return mapDriver(data as Record<string, unknown>);
+  }
+
+  private toRow(input: Omit<Driver, 'id'>): Record<string, unknown> {
+    return {
+      name: input.name.trim(),
+      nickname: input.nickname?.trim() || null,
+      is_legend: input.isLegend,
+      fixed_car_id: input.fixedCarId ?? null,
+      favorite_car_id: input.favoriteCarId ?? null,
+      user_id: input.userId ?? null,
+    };
   }
 
   async remove(id: string): Promise<void> {

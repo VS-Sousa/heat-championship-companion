@@ -111,6 +111,22 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'championships/new',
+        canActivate: [hostGuard],
+        loadComponent: () =>
+          import('./features/championships/championship-form.component').then(
+            (m) => m.ChampionshipFormComponent
+          ),
+      },
+      {
+        path: 'championships/:id/edit',
+        canActivate: [hostGuard],
+        loadComponent: () =>
+          import('./features/championships/championship-form.component').then(
+            (m) => m.ChampionshipFormComponent
+          ),
+      },
+      {
         path: 'championships/:id',
         loadComponent: () =>
           import('./features/championships/championship-detail.component').then(

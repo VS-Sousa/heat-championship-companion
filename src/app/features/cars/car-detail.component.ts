@@ -10,6 +10,7 @@ import { CarsService } from '../../core/services/cars.service';
 import { RacesService } from '../../core/services/races.service';
 import { ChampionshipsService } from '../../core/services/championships.service';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { I18nService } from '../../core/i18n/i18n.service';
 
 @Component({
   selector: 'app-car-detail',
@@ -22,6 +23,7 @@ export class CarDetailComponent implements OnInit {
   private readonly carsService = inject(CarsService);
   private readonly racesService = inject(RacesService);
   private readonly championshipsService = inject(ChampionshipsService);
+  private readonly i18n = inject(I18nService);
 
   readonly car = signal<Car | null>(null);
   readonly history = signal<ResultHistoryRow[]>([]);
@@ -30,6 +32,8 @@ export class CarDetailComponent implements OnInit {
   readonly titles = signal<TitleWin[]>([]);
   readonly error = signal<string | null>(null);
   readonly loading = signal(true);
+  readonly copied = signal(false);
+  private copiedTimer?: ReturnType<typeof setTimeout>;
 
   async ngOnInit(): Promise<void> {
     const id = this.route.snapshot.paramMap.get('id');
@@ -53,6 +57,19 @@ export class CarDetailComponent implements OnInit {
       this.error.set(err instanceof Error ? err.message : 'Failed to load.');
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  async copyColor(): Promise<void> {
+    const hex = this.car()?.colorHex;
+    if (!hex) return;
+    try {
+      await navigator.clipboard.writeText(hex);
+      this.copied.set(true);
+      clearTimeout(this.copiedTimer);
+      this.copiedTimer = setTimeout(() => this.copied.set(false), 1500);
+    } catch {
+      this.error.set(this.i18n.t('cars.copyFailed'));
     }
   }
 }

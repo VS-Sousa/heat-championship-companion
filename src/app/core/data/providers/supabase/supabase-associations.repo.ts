@@ -28,16 +28,32 @@ export class SupabaseAssociationsRepo implements AssociationsRepository {
   }
   async setMembers(associationId: string, driverIds: string[]): Promise<void> {
     const client = this.supabase.getClient();
+    const uniqueIds = [...new Set(driverIds)];
+
+    // Legends cannot be association members (also enforced by a DB trigger).
+    let eligibleIds: string[] = [];
+    if (uniqueIds.length) {
+      const { data, error } = await client
+        .from('drivers')
+        .select('id')
+        .in('id', uniqueIds)
+        .eq('is_legend', false);
+      if (error) throw new Error(error.message);
+      eligibleIds = (data ?? []).map((row) => String((row as { id: string }).id));
+    }
+
     const removed = await client.from('association_members').delete().eq('association_id', associationId);
     if (removed.error) throw new Error(removed.error.message);
-    if (driverIds.length) {
-      const { error } = await client.from('association_members').insert(driverIds.map((driverId) => ({ association_id: associationId, driver_id: driverId })));
+    if (eligibleIds.length) {
+      const { error } = await client.from('association_members').insert(eligibleIds.map((driverId) => ({ association_id: associationId, driver_id: driverId })));
       if (error) throw new Error(error.message);
     }
   }
   private async write(kind: 'insert' | 'update', id: string | undefined, input: Omit<Association, 'id'>): Promise<Association> {
     const table = this.supabase.getClient().from('associations');
-    const query = kind === 'insert' ? table.insert(input) : table.update(input).eq('id', id!);
+    const row = { name: input.name.trim() };
+    if (!row.name) throw new Error('Association name is required.');
+    const query = kind === 'insert' ? table.insert(row) : table.update(row).eq('id', id!);
     const { data, error } = await query.select('*').single();
     if (error) throw new Error(error.message);
     return mapAssociation(data as Record<string, unknown>);

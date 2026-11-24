@@ -86,7 +86,7 @@ Workflow recomendado depois de conectar como **Host**:
 2. **Pilotos** — nome, abreviação, número; marque Lendas e, se quiser, carro fixo ou favorito.
 3. **Pistas** — circuitos da liga (nome + país).
 4. **Campeonatos** — monte o calendário de etapas, sistema de pontos e módulos; pode iniciar uma nova edição na mesma série.
-5. **Corridas** — no detalhe do campeonato, sorteie a pista se necessário, monte o grid e use **Registrar Corrida** (grid, chegada, DNF, pontos automáticos).
+5. **Corridas** — no detalhe do campeonato, registre pilotos (número/abreviação/carro), sorteie a pista se necessário e use **Registrar Corrida** (grid, chegada, pontos automáticos).
 6. **Acompanhar** — classificação (tabela ou gráfico), calendário (lista ou matriz de chegadas), hall da série; finalize o campeonato ao encerrar a temporada.
 
 Visitantes conectam com a mesma URL/chave e só consultam painel, classificação e históricos.

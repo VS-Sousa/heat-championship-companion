@@ -8,7 +8,7 @@
   <p class="text-heat-muted">{{ 'tracks.loading' | t }}</p>
 } @else if (track()) {
   <div class="mb-8">
-    <p class="heat-subtitle">{{ track()!.country }}</p>
+    <p class="heat-subtitle">{{ countryText(track()!.country) }}</p>
     <h1 class="heat-title">{{ track()!.name }}</h1>
   </div>
 

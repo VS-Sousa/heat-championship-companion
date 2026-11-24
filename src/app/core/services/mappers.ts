@@ -4,6 +4,7 @@ import {
   BadgeDefinition,
   Car,
   Championship,
+  ChampionshipEntry,
   Driver,
   GarageUpgrade,
   Race,
@@ -68,11 +69,18 @@ function mapTelemetryEvent(value: unknown): TelemetryEvent {
 
 function mapRaceEntry(value: unknown): RaceEntry {
   const entry = asRecord(value);
+  const numberRaw = entry['number'];
+  const abbrRaw = entry['abbreviation'];
   return {
     driverId: String(entry['driverId'] ?? entry['driver_id']),
     carId: String(entry['carId'] ?? entry['car_id']),
     gridPosition: Number(entry['gridPosition'] ?? entry['grid_position']),
     loadout: parseArray(entry['loadout']).map(String),
+    number:
+      numberRaw !== null && numberRaw !== undefined
+        ? Number(numberRaw)
+        : undefined,
+    abbreviation: abbrRaw ? String(abbrRaw) : undefined,
   };
 }
 
@@ -80,7 +88,21 @@ export function mapAssociation(row: Record<string, unknown>): Association {
   return {
     id: String(row['id']),
     name: String(row['name']),
+  };
+}
+
+export function mapChampionshipEntry(
+  row: Record<string, unknown>,
+  garageUpgradeIds: string[] = []
+): ChampionshipEntry {
+  return {
+    id: String(row['id']),
+    championshipId: String(row['championship_id']),
+    driverId: String(row['driver_id']),
+    carId: String(row['car_id']),
+    number: Number(row['number']),
     abbreviation: String(row['abbreviation']),
+    garageUpgradeIds,
   };
 }
 
@@ -104,9 +126,8 @@ export function mapGarageUpgrade(
   return {
     id: String(row['id']),
     name: String(row['name']),
-    category: row['category'] as GarageUpgrade['category'],
-    heatCost: Number(row['heat_cost'] ?? 0),
-    effect: String(row['effect'] ?? ''),
+    description: String(row['description'] ?? ''),
+    set: (row['set'] as GarageUpgrade['set']) ?? 'basegame',
   };
 }
 
@@ -151,8 +172,6 @@ export function mapDriver(row: Record<string, unknown>): Driver {
     id: String(row['id']),
     name: String(row['name']),
     nickname: row['nickname'] ? String(row['nickname']) : undefined,
-    abbreviation: String(row['abbreviation']),
-    number: Number(row['number']),
     isLegend: Boolean(row['is_legend']),
     fixedCarId: row['fixed_car_id']
       ? String(row['fixed_car_id'])
@@ -198,12 +217,7 @@ export function mapChampionship(row: Record<string, unknown>): Championship {
     useSponsorship: Boolean(row['use_sponsorship']),
     isActive: Boolean(row['is_active']),
     finishedAt: row['finished_at'] ? String(row['finished_at']) : undefined,
-    associationId: row['association_id']
-      ? String(row['association_id'])
-      : undefined,
-    scoringSystemId: row['scoring_system_id']
-      ? String(row['scoring_system_id'])
-      : undefined,
+    scoringSystemId: String(row['scoring_system_id']),
   };
 }
 
@@ -258,7 +272,6 @@ export function mapRaceResult(row: Record<string, unknown>): RaceResult {
     gridPosition: Number(row['grid_position']),
     position: Number(row['position']),
     pointsAwarded: Number(row['points_awarded'] ?? 0),
-    dnf: Boolean(row['dnf']),
     gapTurns:
       row['gap_turns'] !== null && row['gap_turns'] !== undefined
         ? Number(row['gap_turns'])
